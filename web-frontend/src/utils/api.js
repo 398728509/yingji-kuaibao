@@ -66,7 +66,10 @@ export const userAPI = {
 
 export const authAPI = {
   login: (username, password) => api.post('/auth/login', { username, password }),
-  me: () => api.get('/auth/me')
+  me: () => api.get('/auth/me'),
+  refresh: () => api.post('/auth/refresh'),
+  changePassword: (oldPassword, newPassword) => api.put('/auth/password', { oldPassword, newPassword }),
+  register: (data) => api.post('/auth/register', data)
 }
 
 export const templateAPI = {

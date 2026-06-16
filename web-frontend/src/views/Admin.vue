@@ -107,7 +107,6 @@ async function loadData() {
 }
 
 async function addUser() {
-  await authAPI.login(newUser.value.username, newUser.value.password) // just register
   const res = await authAPI.register({
     username: newUser.value.username,
     password: newUser.value.password,

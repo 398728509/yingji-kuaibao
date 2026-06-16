@@ -3,12 +3,24 @@ import { createRouter, createWebHistory } from 'vue-router'
 const routes = [
   {
     path: '/',
-    redirect: '/events'
+    redirect: '/dashboard'
   },
   {
     path: '/login',
     name: 'Login',
     component: () => import('@/views/Login.vue')
+  },
+  {
+    path: '/dashboard',
+    name: 'ReporterDashboard',
+    meta: { roles: ['reporter', 'reviewer', 'admin'] },
+    component: () => import('@/views/ReporterDashboard.vue')
+  },
+  {
+    path: '/command',
+    name: 'CommanderDashboard',
+    meta: { roles: ['commander', 'reviewer', 'admin'] },
+    component: () => import('@/views/CommanderDashboard.vue')
   },
   {
     path: '/events',
@@ -29,6 +41,11 @@ const routes = [
     path: '/events/:id/review/:reportId',
     name: 'ReportReview',
     component: () => import('@/views/ReportReview.vue')
+  },
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: () => import('@/views/Profile.vue')
   },
   {
     path: '/admin',

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const MaterialModel = require('../models/Material');
+const { broadcast } = require('../websocket');
 
 // 获取事件素材列表
 router.get('/event/:eventId', (req, res) => {
@@ -33,6 +34,16 @@ router.post('/', (req, res) => {
   const material = MaterialModel.create({
     eventId, userId, type, content, filePath, fileSize, duration, thumbnailPath, tags
   });
+
+  // 广播新素材通知
+  broadcast({
+    type: 'material_created',
+    eventId,
+    materialId: material.id,
+    userId,
+    type
+  });
+
   res.json(material);
 });
 
