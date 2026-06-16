@@ -7,6 +7,7 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const { setupWebSocket } = require('./websocket');
 const { initDB } = require('./models/database');
 const { initCycles } = require('./services/reportScheduler');
+const { authMiddleware } = require('./middleware/auth');
 const eventRoutes = require('./routes/events');
 const materialRoutes = require('./routes/materials');
 const reportRoutes = require('./routes/reports');
@@ -14,6 +15,7 @@ const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const uploadRoutes = require('./routes/upload');
 const templateRoutes = require('./routes/templates');
+const aiRoutes = require('./routes/ai');
 
 const app = express();
 const server = http.createServer(app);
@@ -29,14 +31,17 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: '应急快报后端', version: '0.1.0' });
 });
 
-// 路由
+// 路由（公开）
 app.use('/api/auth', authRoutes);
-app.use('/api/events', eventRoutes);
-app.use('/api/materials', materialRoutes);
-app.use('/api/reports', reportRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/upload', uploadRoutes);
-app.use('/api/templates', templateRoutes);
+
+// 以下路由需要认证
+app.use('/api/events', authMiddleware, eventRoutes);
+app.use('/api/materials', authMiddleware, materialRoutes);
+app.use('/api/reports', authMiddleware, reportRoutes);
+app.use('/api/users', authMiddleware, userRoutes);
+app.use('/api/upload', authMiddleware, uploadRoutes);
+app.use('/api/templates', authMiddleware, templateRoutes);
+app.use('/api/ai', authMiddleware, aiRoutes);
 
 // WebSocket
 const wss = setupWebSocket(server);

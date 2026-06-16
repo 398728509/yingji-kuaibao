@@ -2,6 +2,7 @@ const MaterialModel = require('../models/Material');
 const ReportModel = require('../models/Report');
 const EventModel = require('../models/Event');
 const TemplateModel = require('../models/Template');
+const { classifyMaterial, detectConflicts } = require('./huaweiAI');
 const { broadcast } = require('../websocket');
 
 /**
@@ -77,29 +78,21 @@ function generateReport(eventId) {
     }
   };
 
-  // 关键词分类规则
-  const classifyRules = [
-    { keywords: ['死亡', '受伤', '失联', '伤亡', '遇难', '被困', '送医', '重症'], target: 'casualties' },
-    { keywords: ['救援', '疏散', '出动', '消防', '搜救', '医疗队', '安置', '帐篷', '物资', '运输'], target: 'response_progress' },
-    { keywords: ['请求', '支援', '短缺', '急需', '协调', '求助', '不够', '缺乏', '需要'], target: 'coordination' },
-    { keywords: ['坍塌', '倒塌', '损毁', '裂缝', '滑坡', '火灾', '洪水', '断裂', '受损'], target: 'site_conditions' },
-  ];
-
   for (const entry of allEntries) {
     const text = entry.text || '';
     if (!text) continue;
 
-    // 检测分类
-    let target = 'event_overview';
-    for (const rule of classifyRules) {
-      if (rule.keywords.some(kw => text.includes(kw))) {
-        target = rule.target;
-        break;
-      }
-    }
+    // 使用 AI 分类引擎
+    const target = classifyMaterial(text);
 
     sections[target].items.push(text);
     sections[target].sourceIds.push(entry.id);
+  }
+
+  // 检测矛盾信息
+  const conflicts = detectConflicts(materials);
+  if (conflicts.length > 0) {
+    console.log('⚠️ 检测到信息矛盾:', conflicts.length, '处');
   }
 
   // 7. 构建快报内容
@@ -126,7 +119,11 @@ function generateReport(eventId) {
     const newMaterialsSince = materials.filter(
       m => new Date(m.created_at) > new Date(lastReport.created_at)
     );
-    diffNotes = `本周期新增 ${newMaterialsSince.length} 条素材`;
+    const newCount = newMaterialsSince.length;
+    diffNotes = `本周期新增 ${newCount} 条素材`;
+    if (conflicts.length > 0) {
+      diffNotes += ` | ⚠️ ${conflicts.length} 处信息矛盾待核实`;
+    }
   } else {
     diffNotes = '首版快报生成';
   }
