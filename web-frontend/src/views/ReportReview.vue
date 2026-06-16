@@ -19,6 +19,7 @@
           <div class="flex gap-8">
             <button class="btn" @click="toggleDiff">{{ showDiff ? '隐藏差异' : '显示差异对比' }}</button>
             <button class="btn" @click="exportWord">📁 导出 Word</button>
+            <button class="btn" @click="exportHtml">📄 导出 HTML</button>
             <button v-if="report.status !== 'final'" class="btn btn-success" @click="finalizeReport">✓ 定稿</button>
           </div>
         </div>
@@ -150,22 +151,31 @@ async function finalizeReport() {
   report.value.status = 'final'
 }
 
-function exportWord() {
-  let md = `# 应急快报 - ${event.value?.title || ''}\n\n`
-  md += `**版本**: 第${report.value.version}版\n`
-  md += `**生成时间**: ${report.value.created_at}\n`
-  md += `**状态**: ${report.value.status === 'final' ? '已定稿' : '待审阅'}\n\n---\n\n`
-  for (const sec of parsedContent.value) {
-    md += `## ${sec.title}\n\n`
-    for (const item of sec.items) md += `- ${item}\n`
-    md += '\n'
+async function exportWord() {
+  try {
+    const token = localStorage.getItem('token')
+    const baseUrl = window.location.origin
+    const url = `${baseUrl}/api/reports/${route.params.reportId}/export/word`
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    if (!res.ok) throw new Error('导出失败')
+    const blob = await res.blob()
+    const blobUrl = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = blobUrl
+    a.download = `应急快报_v${report.value.version}.docx`
+    a.click()
+    URL.revokeObjectURL(blobUrl)
+  } catch (e) {
+    alert('导出 Word 失败: ' + e.message)
   }
-  // 生成下载链接
-  const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url; a.download = `快报_${route.params.id}_v${report.value.version}.md`
-  a.click(); URL.revokeObjectURL(url)
+}
+
+function exportHtml() {
+  const token = localStorage.getItem('token')
+  const url = `${window.location.origin}/api/reports/${route.params.reportId}/export/html`
+  window.open(url, '_blank')
 }
 
 onMounted(loadData)

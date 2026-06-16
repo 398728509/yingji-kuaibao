@@ -119,21 +119,29 @@
           </div>
           <div class="form-group" v-if="submitData.type === 'photo'">
             <label class="form-label">照片</label>
-            <div style="border:2px dashed var(--border);border-radius:8px;padding:30px;text-align:center;cursor:pointer;color:var(--text-light);">
-              📷 点击上传照片（最多9张）
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple @change="onPhotoSelect" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;" />
+            <div style="font-size:12px;color:var(--text-light);margin-top:4px;">支持 JPG/PNG/WebP，最多9张，单张≤20MB</div>
+            <div v-if="submitData.files?.length" style="margin-top:8px;display:flex;gap:4px;flex-wrap:wrap;">
+              <div v-for="(f, i) in submitData.files" :key="i" style="width:60px;height:60px;border-radius:6px;overflow:hidden;background:#f5f5f5;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-light);">📷 {{ f.name.substring(f.name.length-8) }}</div>
             </div>
           </div>
           <div class="form-group" v-if="submitData.type === 'voice'">
-            <label class="form-label">录音</label>
-            <div style="border:2px dashed var(--border);border-radius:8px;padding:30px;text-align:center;cursor:pointer;color:var(--text-light);">
-              🎤 点击开始录音
-            </div>
+            <label class="form-label">录音文件</label>
+            <input type="file" accept="audio/*" @change="onVoiceSelect" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;" />
+            <div style="font-size:12px;color:var(--text-light);margin-top:4px;">支持 MP3/WAV/AMR/M4A，≤50MB</div>
+            <div v-if="submitData.voiceFile" style="margin-top:8px;padding:8px;background:#f6ffed;border-radius:8px;font-size:13px;">🎤 {{ submitData.voiceFile.name }}</div>
           </div>
           <div class="flex gap-8" style="justify-content:flex-end;">
             <button class="btn" @click="showSubmit = false">取消</button>
             <button class="btn btn-primary" @click="submitMaterial" :disabled="!submitData.eventId || (submitData.type === 'text' && !submitData.content) || submitting">
               {{ submitting ? '提交中...' : '提交' }}
             </button>
+          </div>
+          <div v-if="uploadProgress > 0 && uploadProgress < 100" style="margin-top:8px;">
+            <div style="height:4px;background:#f0f0f0;border-radius:2px;overflow:hidden;">
+              <div :style="{ width: uploadProgress + '%', height: '100%', background: 'var(--primary)', transition: 'width 0.3s' }"></div>
+            </div>
+            <div style="font-size:12px;color:var(--text-light);margin-top:4px;">上传中 {{ uploadProgress }}%</div>
           </div>
           <div v-if="submitResult" style="margin-top:12px;padding:8px 12px;border-radius:8px;font-size:13px;"
                :style="{ background: submitResult.success ? '#f6ffed' : '#fff2f0', color: submitResult.success ? '#52c41a' : '#ff4d4f' }">
@@ -147,7 +155,8 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { eventAPI, materialAPI, reportAPI } from '@/utils/api'
+import { eventAPI, materialAPI, reportAPI, uploadAPI } from '@/utils/api'
+import { getWS } from '@/utils/websocket'
 import Sidebar from '@/components/Sidebar.vue'
 
 const user = JSON.parse(localStorage.getItem('user') || '{}')
@@ -159,7 +168,15 @@ const selectedEventId = ref('')
 const showSubmit = ref(false)
 const submitting = ref(false)
 const submitResult = ref(null)
-const submitData = ref({ eventId: '', type: 'text', content: '' })
+const submitData = ref({ eventId: '', type: 'text', content: '', files: null, voiceFile: null })
+const uploadProgress = ref(0)
+
+function onPhotoSelect(e) {
+  submitData.value.files = Array.from(e.target.files || [])
+}
+function onVoiceSelect(e) {
+  submitData.value.voiceFile = e.target.files?.[0] || null
+}
 
 const parsedContent = computed(() => {
   if (!latestReport.value?.content) return []
@@ -227,18 +244,40 @@ async function submitMaterial() {
   if (!submitData.value.eventId) return
   submitting.value = true
   submitResult.value = null
+  uploadProgress.value = 0
   try {
+    let filePath = null
+    let fileSize = null
+
+    // 上传文件（如果有）
+    if (submitData.value.type === 'photo' && submitData.value.files?.length > 0) {
+      const res = await uploadAPI.uploadPhotos(submitData.value.files, (p) => {
+        uploadProgress.value = Math.round(p.progress || 0)
+      })
+      filePath = res.data[0]?.filePath
+      fileSize = res.data[0]?.size
+    } else if (submitData.value.type === 'voice' && submitData.value.voiceFile) {
+      const res = await uploadAPI.upload(submitData.value.voiceFile, (p) => {
+        uploadProgress.value = Math.round(p.progress || 0)
+      })
+      filePath = res.data.filePath
+      fileSize = res.data.size
+    }
+
     await materialAPI.create({
       eventId: submitData.value.eventId,
       userId: user.id,
       type: submitData.value.type,
-      content: submitData.value.content || ''
+      content: submitData.value.content || '',
+      filePath,
+      fileSize
     })
+
     submitResult.value = { success: true, msg: '✅ 素材已提交，将纳入下一期快报' }
-    submitData.value.content = ''
+    submitData.value = { eventId: submitData.value.eventId, type: 'text', content: '', files: null, voiceFile: null }
     loadActivity()
   } catch (e) {
-    submitResult.value = { success: false, msg: '❌ 提交失败：' + (e.response?.data?.error || '网络错误') }
+    submitResult.value = { success: false, msg: '❌ 提交失败：' + (e.response?.data?.error || e.message || '网络错误') }
   } finally { submitting.value = false }
 }
 

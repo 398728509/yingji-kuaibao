@@ -78,3 +78,27 @@ export const templateAPI = {
   create: (data) => api.post('/templates', data),
   setDefault: (id) => api.post(`/templates/${id}/default`)
 }
+
+export const uploadAPI = {
+  upload: (file, onProgress) => {
+    const form = new FormData();
+    form.append('file', file);
+    return api.post('/upload', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: onProgress
+    });
+  },
+  uploadPhotos: (files, onProgress) => {
+    const form = new FormData();
+    files.forEach(f => form.append('photos', f));
+    return api.post('/upload/photos', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: onProgress
+    });
+  }
+}
+
+export const exportAPI = {
+  word: (reportId) => `${api.defaults.baseURL}/reports/${reportId}/export/word`,
+  html: (reportId) => `${api.defaults.baseURL}/reports/${reportId}/export/html`
+}

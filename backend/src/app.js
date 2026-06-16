@@ -20,8 +20,16 @@ const aiRoutes = require('./routes/ai');
 const app = express();
 const server = http.createServer(app);
 
-// 中间件
-app.use(cors());
+// CORS 配置（生产环境需按需收紧）
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production'
+    ? ['https://你的域名.com', /.你的域名.com$/]
+    : '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+app.use(cors(corsOptions));
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
@@ -51,6 +59,20 @@ initDB();
 
 // 启动定时生成周期
 initCycles();
+
+// 全局错误处理中间件
+app.use((err, req, res, next) => {
+  console.error('❌ 未捕获错误:', err.message || err);
+  if (err.name === 'MulterError') {
+    return res.status(400).json({ error: `文件上传错误: ${err.message}` });
+  }
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({ error: '请求体过大，请压缩后重试' });
+  }
+  res.status(err.status || 500).json({
+    error: err.message || '服务器内部错误'
+  });
+});
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
