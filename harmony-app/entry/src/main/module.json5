@@ -1,0 +1,27 @@
+{
+  "module": {
+    "name": "entry",
+    "type": "entry",
+    "description": "$string:module_desc",
+    "mainAbility": ".MainAbility",
+    "deviceTypes": ["phone"],
+    "abilities": [
+      {
+        "name": ".MainAbility",
+        "label": "$string:app_name",
+        "type": "page",
+        "launchType": "singleton",
+        "icon": "$media:app_icon",
+        "srcEntrance": "./ets/MainAbility.ts",
+        "pages": [
+          "pages/Index.ets",
+          "pages/EventList.ets",
+          "pages/EventDetail.ets",
+          "pages/ReportView.ets",
+          "pages/MaterialInput.ets",
+          "pages/ReportHistory.ets"
+        ]
+      }
+    ]
+  }
+}

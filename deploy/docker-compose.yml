@@ -1,0 +1,47 @@
+# 应急快报 - Docker Compose 部署
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - backend_data:/app/data
+      - backend_uploads:/app/uploads
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  web-frontend:
+    build:
+      context: ./web-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always
+
+  ai-engine:
+    build:
+      context: ./ai-engine
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - BACKEND_URL=http://backend:3000
+      - HUAWEI_AI_APPCODE=${HUAWEI_AI_APPCODE:-}
+    restart: always
+
+volumes:
+  backend_data:
+  backend_uploads:
