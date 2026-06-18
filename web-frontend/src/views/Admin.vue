@@ -14,14 +14,21 @@
             <button class="btn btn-sm btn-primary" @click="showAddUser = true">＋ 添加用户</button>
           </div>
           <table class="table">
-            <thead><tr><th>姓名</th><th>用户名</th><th>角色</th><th>状态</th><th>操作</th></tr></thead>
+            <thead><tr><th>姓名</th><th>用户名</th><th>角色</th><th>单位</th><th>状态</th><th>操作</th></tr></thead>
             <tbody>
               <tr v-for="u in users" :key="u.id">
-                <td>{{ u.displayName }}</td>
-                <td style="font-size:12px;">{{ u.username }}</td>
-                <td><span class="badge badge-active">{{ roleName(u.role) }}</span></td>
-                <td><span :class="['badge', u.status === 'active' ? 'badge-active' : 'badge-closed']">{{ u.status }}</span></td>
-                <td><button class="btn btn-sm btn-danger" @click="deleteUser(u.id)">删除</button></td>
+                <td data-label="姓名"><strong>{{ u.displayName || u.display_name || '-' }}</strong></td>
+                <td data-label="用户名">{{ u.username }}</td>
+                <td data-label="角色">{{ roleName(u.role) }}</td>
+                <td data-label="单位">{{ u.unit || '-' }}</td>
+                <td data-label="状态">
+                  <span :class="['badge', u.status === 'active' || u.status === undefined ? 'badge-active' : 'badge-closed']">
+                    {{ u.status === 'active' || u.status === undefined ? '正常' : '已禁用' }}
+                  </span>
+                </td>
+                <td data-label="操作">
+                  <button class="btn btn-sm btn-danger" @click="deleteUser(u.id)" :disabled="u.role === 'admin' && users.filter(x => x.role === 'admin').length <= 1">删除</button>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -66,7 +73,7 @@
           <div class="form-group">
             <label class="form-label">角色</label>
             <select class="form-select" v-model="newUser.role">
-              <option value="reporter">信息员</option>
+              <option value="reporter">信息采集员</option>
               <option value="reviewer">编辑审核员</option>
               <option value="commander">指挥官</option>
               <option value="admin">管理员</option>
@@ -97,7 +104,7 @@ const showAddUser = ref(false)
 const newUser = ref({ displayName: '', username: '', password: '', role: 'reporter', phone: '' })
 
 function roleName(r) {
-  return { admin: '管理员', reporter: '信息员', reviewer: '编辑员', commander: '指挥官' }[r] || r
+  return { admin: '管理员', reporter: '信息采集员', reviewer: '编辑员', commander: '指挥官' }[r] || r
 }
 
 async function loadData() {

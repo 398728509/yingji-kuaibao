@@ -3,10 +3,10 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { db } = require('../models/database');
 const { v4: uuidv4 } = require('uuid');
-const { generateToken, authMiddleware } = require('../middleware/auth');
+const { generateToken, authMiddleware, requireRole } = require('../middleware/auth');
 
 // 注册（管理员预建账号）
-router.post('/register', async (req, res) => {
+router.post('/register', authMiddleware, requireRole('admin'), async (req, res) => {
   try {
     const { username, password, displayName, role, phone } = req.body;
     if (!username || !password || !displayName || !role) {
@@ -41,7 +41,8 @@ router.post('/register', async (req, res) => {
         username: user.username,
         displayName: user.display_name,
         role: user.role,
-        phone: user.phone
+        phone: user.phone,
+        unit: user.unit
       }
     });
   } catch (err) {
@@ -73,7 +74,8 @@ router.post('/login', async (req, res) => {
         username: user.username,
         displayName: user.display_name,
         role: user.role,
-        phone: user.phone
+        phone: user.phone,
+        unit: user.unit
       }
     });
   } catch (err) {
@@ -84,7 +86,7 @@ router.post('/login', async (req, res) => {
 
 // 获取当前用户信息
 router.get('/me', authMiddleware, (req, res) => {
-  const user = db.prepare("SELECT id, username, display_name as displayName, role, phone, status, created_at FROM users WHERE id = ?").get(req.user.id);
+  const user = db.prepare("SELECT id, username, display_name as displayName, role, phone, unit, status, created_at FROM users WHERE id = ?").get(req.user.id);
   if (!user) return res.status(404).json({ error: '用户不存在' });
   res.json(user);
 });
@@ -119,6 +121,21 @@ router.put('/password', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('修改密码失败:', err);
     res.status(500).json({ error: '修改密码失败' });
+  }
+});
+
+
+// 修改个人资料
+router.put('/profile', authMiddleware, async (req, res) => {
+  try {
+    const { displayName, phone, unit } = req.body;
+    if (!displayName) return res.status(400).json({ error: '姓名不能为空' });
+    db.prepare("UPDATE users SET display_name = ?, phone = ?, unit = ?, updated_at = datetime('now','localtime') WHERE id = ?").run(displayName, phone || null, unit || null, req.user.id);
+    const user = db.prepare("SELECT id, username, display_name as displayName, role, phone, unit, status FROM users WHERE id = ?").get(req.user.id);
+    res.json({ success: true, user });
+  } catch (err) {
+    console.error('更新个人资料失败:', err);
+    res.status(500).json({ error: '更新失败' });
   }
 });
 

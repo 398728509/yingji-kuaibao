@@ -41,6 +41,11 @@ class MaterialModel {
     return db.prepare("SELECT COUNT(*) as c FROM materials WHERE event_id = ? AND status = 'active'").get(eventId).c;
   }
 
+  static countNewSince(eventId, since) {
+    const row = db.prepare("SELECT COUNT(*) as c FROM materials WHERE event_id = ? AND status = 'active' AND created_at > ?").get(eventId, since);
+    return row ? row.c : 0;
+  }
+
   static updateVoiceText(id, text) {
     db.prepare('UPDATE materials SET voice_text = ? WHERE id = ?').run(text, id);
     return this.getById(id);

@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
-const JWT_EXPIRES_IN = '7d';
+const JWT_EXPIRES_IN = '24h';
 
 /**
  * 生成 JWT Token

@@ -5,11 +5,17 @@
       <small>v0.1.0</small>
     </div>
 
-    <div class="nav-item" :class="{ active: $route.path === '/dashboard' }" @click="$router.push('/dashboard')">
-      📋 信息员工作台
+    <div v-if="user.role === 'reporter' || user.role === 'reviewer' || user.role === 'admin'"
+         class="nav-item" :class="{ active: $route.path === '/dashboard' }" @click="$router.push('/dashboard')">
+      📋 采集员工作台
     </div>
-    <div class="nav-item" :class="{ active: $route.path === '/command' }" @click="$router.push('/command')">
+    <div v-if="user.role === 'commander' || user.role === 'reviewer' || user.role === 'admin'"
+         class="nav-item" :class="{ active: $route.path === '/command' }" @click="$router.push('/command')">
       📊 指挥看板
+    </div>
+    <div v-if="user.role === 'admin'"
+         class="nav-item" :class="{ active: $route.path === '/admin' }" @click="$router.push('/admin')">
+      ⚙️ 系统管理
     </div>
     <div style="height:1px;background:rgba(255,255,255,0.1);margin:8px 16px;"></div>
     <div class="nav-item" :class="{ active: $route.path.startsWith('/events') }" @click="$router.push('/events')">

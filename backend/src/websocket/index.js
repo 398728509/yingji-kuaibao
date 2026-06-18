@@ -2,11 +2,30 @@ const WebSocket = require('ws');
 
 let wss = null;
 
+const jwt = require('jsonwebtoken');
+const { JWT_SECRET } = require('../middleware/auth');
+
 function setupWebSocket(server) {
   wss = new WebSocket.Server({ server, path: '/ws' });
 
   wss.on('connection', (ws, req) => {
-    console.log('🔌 WebSocket 客户端已连接');
+    // Authenticate via token in query string
+    const params = new URL(req.url, 'http://localhost').searchParams;
+    const token = params.get('token');
+    if (!token) {
+      console.log('🔒 WebSocket 连接拒绝: 缺少 token');
+      ws.close(4001, 'Missing authentication token');
+      return;
+    }
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      ws.user = decoded;
+    } catch (err) {
+      console.log('🔒 WebSocket 连接拒绝: 无效 token');
+      ws.close(4001, 'Invalid authentication token');
+      return;
+    }
+    console.log('🔌 WebSocket 客户端已连接:', decoded.username);
 
     ws.on('message', (data) => {
       try {

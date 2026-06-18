@@ -5,6 +5,9 @@
 </template>
 
 <script setup>
-import { useWebSocket } from '@/utils/websocket'
-useWebSocket()
+import { getWS, destroyWS } from '@/utils/websocket'
+import { onUnmounted } from 'vue'
+
+const ws = getWS()
+onUnmounted(() => { destroyWS() })
 </script>

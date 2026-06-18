@@ -2,7 +2,7 @@
   <div class="login-page">
     <div class="login-card">
       <h1>🚨 应急快报</h1>
-      <p class="subtitle">编辑审阅后台</p>
+      <p class="subtitle">应急信息采集与指挥系统</p>
       <div v-if="error" style="color:var(--danger);font-size:13px;margin-bottom:12px;text-align:center">{{ error }}</div>
       <div class="form-group">
         <label class="form-label">用户名</label>
@@ -37,7 +37,11 @@ async function login() {
     const res = await authAPI.login(username.value, password.value)
     localStorage.setItem('token', res.data.token)
     localStorage.setItem('user', JSON.stringify(res.data.user))
-    router.push('/events')
+    // 按角色跳转
+      const role = res.data.user.role
+      if (role === 'commander') router.push('/command')
+      else if (role === 'admin') router.push('/admin')
+      else router.push('/dashboard')
   } catch (e) {
     error.value = e.response?.data?.error || '登录失败'
   } finally { loading.value = false }

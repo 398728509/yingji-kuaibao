@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const MaterialModel = require('../models/Material');
 const { broadcast } = require('../websocket');
+const { triggerGenerate } = require('../services/reportScheduler');
 
 // 获取事件素材列表
 router.get('/event/:eventId', (req, res) => {
@@ -43,6 +44,9 @@ router.post('/', (req, res) => {
     userId,
     type
   });
+
+  // 新素材上报 -> 触发自动生成快报（30秒去抖）
+  triggerGenerate(eventId);
 
   res.json(material);
 });

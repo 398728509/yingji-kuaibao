@@ -46,7 +46,7 @@
         <div v-for="e in filteredEvents" :key="e.id"
              style="border:1px solid var(--border);border-radius:12px;margin-bottom:12px;overflow:hidden;">
           <div style="display:flex;align-items:center;padding:16px;cursor:pointer;"
-               @click="selectedEventId = selectedEventId === e.id ? null : e.id">
+               @click="$router.push(`/events/${e.id}`)">
             <span class="status-dot" :class="e.status === 'active' ? 'red' : 'green'" style="flex-shrink:0;"></span>
             <div style="flex:1;margin-left:12px;">
               <div style="font-weight:600;">{{ e.title }}</div>
@@ -66,23 +66,7 @@
             </div>
           </div>
 
-          <!-- 展开的快报内容 -->
-          <div v-if="selectedEventId === e.id && eventReports[e.id]" style="border-top:1px solid var(--border);padding:16px;background:#fafafa;">
-            <div class="flex-between" style="margin-bottom:8px;">
-              <strong style="font-size:14px;">第{{ eventReports[e.id].version }}版快报</strong>
-              <div class="flex gap-8">
-                <span class="badge" :class="eventReports[e.id].status === 'final' ? 'badge-final' : 'badge-draft'">
-                  {{ eventReports[e.id].status === 'final' ? '已定稿' : '待审阅' }}
-                </span>
-                <button class="btn btn-sm" @click.stop="$router.push(`/events/${e.id}/review/${eventReports[e.id].id}`)">查看 →</button>
-              </div>
-            </div>
-            <div v-if="eventReports[e.id].diff_notes" class="diff-banner" style="margin-bottom:8px;">💡 {{ eventReports[e.id].diff_notes }}</div>
-            <div style="font-size:13px;line-height:1.8;color:#333;" v-if="eventReports[e.id].summary">
-              {{ eventReports[e.id].summary }}
-            </div>
-            <div v-else style="color:var(--text-light);font-size:13px;">暂无摘要</div>
-          </div>
+          <!-- 点击跳转事件详情页面 -->
         </div>
       </div>
     </div>
@@ -96,7 +80,6 @@ import Sidebar from '@/components/Sidebar.vue'
 
 const events = ref([])
 const evFilter = ref('active')
-const selectedEventId = ref(null)
 const eventReports = ref({})
 const lastRefresh = ref('')
 
@@ -125,7 +108,7 @@ async function refreshAll() {
 
   // Preload reports for events that are expanded or have active status
   for (const e of events.value) {
-    if (e.status === 'active' || selectedEventId.value === e.id) {
+    if (e.status === 'active') {
       try {
         const r = await reportAPI.getLatest(e.id)
         if (r.data) eventReports.value[e.id] = r.data

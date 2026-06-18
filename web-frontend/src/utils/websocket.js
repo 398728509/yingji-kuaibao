@@ -17,7 +17,9 @@ function createWebSocket() {
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const host = window.location.host
-    const url = `${protocol}//${host}/ws`
+    // Get token from localStorage and pass as query param
+    const token = localStorage.getItem('token')
+    const url = `${protocol}//${host}/ws?token=${encodeURIComponent(token || '')}`
 
     try {
       ws = new WebSocket(url)

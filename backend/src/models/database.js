@@ -19,7 +19,7 @@ function initDB() {
       password_hash TEXT NOT NULL,
       display_name TEXT NOT NULL,
       role TEXT NOT NULL CHECK(role IN ('admin','reporter','reviewer','commander')),
-      phone TEXT,
+      phone TEXT, unit TEXT DEFAULT null,
       status TEXT DEFAULT 'active',
       created_at TEXT DEFAULT (datetime('now','localtime')),
       updated_at TEXT DEFAULT (datetime('now','localtime'))

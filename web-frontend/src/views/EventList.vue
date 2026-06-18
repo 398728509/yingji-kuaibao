@@ -31,22 +31,22 @@
           <tbody>
             <tr v-if="events.length === 0"><td colspan="8" class="empty">暂无事件</td></tr>
             <tr v-for="e in filteredEvents" :key="e.id">
-              <td><strong>{{ e.title }}</strong></td>
-              <td class="text-secondary">{{ e.location }}</td>
-              <td>
+              <td data-label="事件名称"><strong>{{ e.title }}</strong></td>
+              <td data-label="地点" class="text-secondary">{{ e.location }}</td>
+              <td data-label="状态">
                 <span :class="['badge', e.status === 'active' ? 'badge-active' : 'badge-closed']">
                   {{ e.status === 'active' ? '进行中' : e.status === 'closed' ? '已关闭' : '已归档' }}
                 </span>
               </td>
-              <td>{{ e.materialCount }}</td>
-              <td>{{ e.reportCount }}</td>
-              <td>
+              <td data-label="素材">{{ e.materialCount }}</td>
+              <td data-label="快报">{{ e.reportCount }}</td>
+              <td data-label="最新快报">
                 <span v-if="e.latestReport" style="font-size:12px;color:var(--text-light);">
                   v{{ e.latestReport.version }} · {{ formatTime(e.latestReport.created_at) }}
                 </span>
                 <span v-else style="color:#999;font-size:12px;">未生成</span>
               </td>
-              <td class="text-secondary" style="font-size:12px;">{{ formatTime(e.created_at) }}</td>
+              <td data-label="创建时间" class="text-secondary" style="font-size:12px;">{{ formatTime(e.created_at) }}</td>
               <td>
                 <button class="btn btn-sm" @click="$router.push(`/events/${e.id}`)">查看</button>
                 <button v-if="e.status === 'active'" class="btn btn-sm" style="margin-left:4px;" @click="closeEvent(e.id)">关闭</button>

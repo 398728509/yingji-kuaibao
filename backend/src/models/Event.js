@@ -16,26 +16,30 @@ class EventModel {
   }
 
   static list(status) {
-    let rows;
-    if (status) {
-      rows = db.prepare('SELECT * FROM events WHERE status = ? ORDER BY created_at DESC').all(status);
-    } else {
-      rows = db.prepare('SELECT * FROM events ORDER BY created_at DESC').all();
-    }
-    // 附加统计信息
+    const sql = status
+      ? `SELECT e.*,
+          (SELECT COUNT(*) FROM materials WHERE event_id = e.id) as materialCount,
+          (SELECT COUNT(*) FROM reports WHERE event_id = e.id) as reportCount
+         FROM events e WHERE e.status = ? ORDER BY e.created_at DESC`
+      : `SELECT e.*,
+          (SELECT COUNT(*) FROM materials WHERE event_id = e.id) as materialCount,
+          (SELECT COUNT(*) FROM reports WHERE event_id = e.id) as reportCount
+         FROM events e ORDER BY e.created_at DESC`;
+    const params = status ? [status] : [];
+    const rows = db.prepare(sql).all(...params);
     return rows.map(e => ({
       ...e,
-      materialCount: db.prepare('SELECT COUNT(*) as c FROM materials WHERE event_id = ?').get(e.id).c,
-      reportCount: db.prepare('SELECT COUNT(*) as c FROM reports WHERE event_id = ?').get(e.id).c,
       latestReport: db.prepare('SELECT created_at, version FROM reports WHERE event_id = ? ORDER BY version DESC LIMIT 1').get(e.id) || null
     }));
   }
 
   static update(id, data) {
+    // whitelist: only allow predefined fields
+    const ALLOWED = new Set(['title', 'description', 'location', 'longitude', 'latitude', 'status']);
     const fields = [];
     const values = [];
     for (const [k, v] of Object.entries(data)) {
-      if (['title', 'description', 'location', 'longitude', 'latitude', 'status'].includes(k)) {
+      if (ALLOWED.has(k)) {
         fields.push(`${k} = ?`);
         values.push(v);
       }

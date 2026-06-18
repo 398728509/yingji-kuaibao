@@ -4,8 +4,8 @@
     <div class="app-main">
       <div class="top-bar">
         <div>
-          <h1>📋 信息员工作台</h1>
-          <p style="font-size:13px;color:var(--text-light);margin-top:4px;">你好，{{ user.displayName }} · {{ user.role === 'reporter' ? '现场信息员' : roleName(user.role) }}</p>
+          <h1>📋 信息采集员工作台</h1>
+          <p style="font-size:13px;color:var(--text-light);margin-top:4px;">你好，{{ user.displayName }} · {{ user.role === 'reporter' ? '信息采集员' : roleName(user.role) }}</p>
         </div>
         <div class="flex gap-8">
           <button class="btn btn-primary" @click="showSubmit = true" v-if="activeEvents.length > 0">＋ 上报素材</button>
@@ -13,7 +13,7 @@
       </div>
 
       <!-- 快捷操作 -->
-      <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-bottom:20px;">
+      <div class="dashboard-grid">
         <!-- 我的事件 -->
         <div class="card">
           <div class="card-title">
@@ -46,7 +46,14 @@
               {{ typeIcon(a.type) }}
             </div>
             <div class="material-content">
-              <div class="preview">{{ a.content || a.voice_text || (a.type === 'photo' ? '[照片]' : '') || (a.type === 'voice' ? '[语音]' : '') }}</div>
+              <div class="preview">
+              <template v-if="a.type === 'photo' && a.file_path">
+                <img :src="a.file_path" class="material-thumb material-thumb-sm"
+                     @click.stop="previewImg = a.file_path"
+                     @error="onImgError($event)" />
+              </template>
+              <template v-else>{{ a.content || a.voice_text || (a.type === 'video' ? '[视频]' : '') }}</template>
+            </div>
               <div class="meta">
                 {{ a.user_name }} · {{ formatTime(a.created_at) }}
                 <span v-if="a.type === 'voice' && a.voice_text" style="color:var(--success);margin-left:4px;">✓ 已转文字</span>
@@ -110,7 +117,7 @@
             <div class="flex gap-8">
               <button :class="['btn btn-sm', submitData.type === 'text' ? 'btn-primary' : '']" @click="submitData.type = 'text'">✏️ 文字</button>
               <button :class="['btn btn-sm', submitData.type === 'photo' ? 'btn-primary' : '']" @click="submitData.type = 'photo'">📷 照片</button>
-              <button :class="['btn btn-sm', submitData.type === 'voice' ? 'btn-primary' : '']" @click="submitData.type = 'voice'">🎤 语音</button>
+              <button :class="['btn btn-sm', submitData.type === 'video' ? 'btn-primary' : '']" @click="submitData.type = 'video'">🎬 视频</button>
             </div>
           </div>
           <div class="form-group" v-if="submitData.type === 'text'">
@@ -125,11 +132,11 @@
               <div v-for="(f, i) in submitData.files" :key="i" style="width:60px;height:60px;border-radius:6px;overflow:hidden;background:#f5f5f5;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-light);">📷 {{ f.name.substring(f.name.length-8) }}</div>
             </div>
           </div>
-          <div class="form-group" v-if="submitData.type === 'voice'">
-            <label class="form-label">录音文件</label>
-            <input type="file" accept="audio/*" @change="onVoiceSelect" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;" />
-            <div style="font-size:12px;color:var(--text-light);margin-top:4px;">支持 MP3/WAV/AMR/M4A，≤50MB</div>
-            <div v-if="submitData.voiceFile" style="margin-top:8px;padding:8px;background:#f6ffed;border-radius:8px;font-size:13px;">🎤 {{ submitData.voiceFile.name }}</div>
+          <div class="form-group" v-if="submitData.type === 'video'">
+            <label class="form-label">视频文件</label>
+            <input type="file" accept="video/*" @change="onVoiceSelect" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;" />
+            <div style="font-size:12px;color:var(--text-light);margin-top:4px;">支持 MP4/AVI/MOV，≤100MB</div>
+            <div v-if="submitData.videoFile" style="margin-top:8px;padding:8px;background:#f6ffed;border-radius:8px;font-size:13px;">🎤 {{ submitData.videoFile.name }}</div>
           </div>
           <div class="flex gap-8" style="justify-content:flex-end;">
             <button class="btn" @click="showSubmit = false">取消</button>
@@ -151,6 +158,12 @@
       </div>
     </div>
   </div>
+
+  <!-- 图片预览灯箱 -->
+  <div v-if="previewImg" class="preview-overlay" @click="previewImg = null">
+    <span class="preview-close">&times;</span>
+    <img :src="previewImg" class="preview-image" @click.stop />
+  </div>
 </template>
 
 <script setup>
@@ -168,14 +181,15 @@ const selectedEventId = ref('')
 const showSubmit = ref(false)
 const submitting = ref(false)
 const submitResult = ref(null)
-const submitData = ref({ eventId: '', type: 'text', content: '', files: null, voiceFile: null })
+const submitData = ref({ eventId: '', type: 'text', content: '', files: null, videoFile: null })
 const uploadProgress = ref(0)
+const previewImg = ref(null)
 
 function onPhotoSelect(e) {
   submitData.value.files = Array.from(e.target.files || [])
 }
 function onVoiceSelect(e) {
-  submitData.value.voiceFile = e.target.files?.[0] || null
+  submitData.value.videoFile = e.target.files?.[0] || null
 }
 
 const parsedContent = computed(() => {
@@ -183,8 +197,10 @@ const parsedContent = computed(() => {
   try { return JSON.parse(latestReport.value.content) } catch { return [] }
 })
 
+function onImgError(e) { e.target.style.display = 'none'; }
+
 function roleName(r) {
-  return { admin: '管理员', reporter: '信息员', reviewer: '编辑员', commander: '指挥官' }[r] || r
+  return { admin: '管理员', reporter: '信息采集员', reviewer: '编辑员', commander: '指挥官' }[r] || r
 }
 
 function typeIcon(t) {
@@ -252,13 +268,13 @@ async function submitMaterial() {
     // 上传文件（如果有）
     if (submitData.value.type === 'photo' && submitData.value.files?.length > 0) {
       const res = await uploadAPI.uploadPhotos(submitData.value.files, (p) => {
-        uploadProgress.value = Math.round(p.progress || 0)
+        uploadProgress.value = Math.round((p.progress || 0) * 100)
       })
       filePath = res.data[0]?.filePath
       fileSize = res.data[0]?.size
-    } else if (submitData.value.type === 'voice' && submitData.value.voiceFile) {
-      const res = await uploadAPI.upload(submitData.value.voiceFile, (p) => {
-        uploadProgress.value = Math.round(p.progress || 0)
+    } else if (submitData.value.type === 'video' && submitData.value.videoFile) {
+      const res = await uploadAPI.upload(submitData.value.videoFile, (p) => {
+        uploadProgress.value = Math.round((p.progress || 0) * 100)
       })
       filePath = res.data.filePath
       fileSize = res.data.size
@@ -274,7 +290,7 @@ async function submitMaterial() {
     })
 
     submitResult.value = { success: true, msg: '✅ 素材已提交，将纳入下一期快报' }
-    submitData.value = { eventId: submitData.value.eventId, type: 'text', content: '', files: null, voiceFile: null }
+    submitData.value = { eventId: submitData.value.eventId, type: 'text', content: '', files: null, videoFile: null }
     loadActivity()
   } catch (e) {
     submitResult.value = { success: false, msg: '❌ 提交失败：' + (e.response?.data?.error || e.message || '网络错误') }
