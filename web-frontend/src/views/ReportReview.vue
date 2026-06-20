@@ -29,11 +29,35 @@
         <div v-if="showDiff && prevReport" style="margin-bottom:16px;">
           <div class="card">
             <div class="card-title">📊 与上版对比</div>
-            <div style="font-size:13px;line-height:1.8;">
+            <div style="font-size:13px;line-height:1.8;margin-bottom:12px;">
               <div><strong>本版 (v{{ report.version }})</strong> <span style="color:var(--text-light);margin-left:8px;">{{ report.created_at }}</span></div>
               <div style="height:1px;background:var(--border);margin:8px 0;"></div>
               <div><strong>上版 (v{{ prevReport.version }})</strong> <span style="color:var(--text-light);margin-left:8px;">{{ prevReport.created_at }}</span></div>
             </div>
+
+            <!-- 差异详情 -->
+            <div v-if="diffDetail.length > 0">
+              <div v-for="sec in diffDetail" :key="sec.key" style="margin-bottom:12px;padding:10px;background:#f9f9f9;border-radius:6px;border:1px solid var(--border);">
+                <div style="font-weight:600;font-size:14px;margin-bottom:6px;">{{ sec.title }}</div>
+
+                <!-- 新增条目（绿底） -->
+                <div v-for="(item, i) in sec.added" :key="'a-'+i"
+                     style="padding:4px 8px;margin:2px 0;background:#e6ffed;border-left:3px solid #2da44e;border-radius:3px;font-size:13px;">
+                  <span style="color:#2da44e;font-weight:700;margin-right:4px;">++</span> {{ item }}
+                </div>
+
+                <!-- 移除条目（红底） -->
+                <div v-for="(item, i) in sec.removed" :key="'r-'+i"
+                     style="padding:4px 8px;margin:2px 0;background:#ffeef0;border-left:3px solid #d73a49;border-radius:3px;font-size:13px;text-decoration:line-through;color:#666;">
+                  <span style="color:#d73a49;font-weight:700;margin-right:4px;">--</span> {{ item }}
+                </div>
+
+                <!-- 无变化 -->
+                <div v-if="sec.added.length === 0 && sec.removed.length === 0"
+                     style="font-size:12px;color:#999;padding:4px 0;">无变化</div>
+              </div>
+            </div>
+            <div v-else style="font-size:12px;color:#999;">加载差异数据中...</div>
           </div>
         </div>
 
@@ -145,6 +169,12 @@ async function loadData() {
     console.error('加载失败:', e)
   }
 }
+
+const diffDetail = computed(() => {
+  if (!report.value?.diff_detail) return []
+  try { return JSON.parse(report.value.diff_detail) }
+  catch { return [] }
+})
 
 function toggleDiff() { showDiff.value = !showDiff.value }
 

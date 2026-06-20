@@ -1,13 +1,15 @@
 const { db } = require('./database');
 const { v4: uuidv4 } = require('uuid');
 
+try { db.exec("ALTER TABLE reports ADD COLUMN diff_detail TEXT"); } catch(e) { }
+
 class ReportModel {
-  static create({ eventId, version, content, summary, diffNotes, generatedBy }) {
+  static create({ eventId, version, content, summary, diffNotes, diffDetail, generatedBy }) {
     const id = uuidv4();
     db.prepare(`
-      INSERT INTO reports (id, event_id, version, content, summary, diff_notes, generated_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(id, eventId, version, content, summary || '', diffNotes || '', generatedBy || 'ai');
+      INSERT INTO reports (id, event_id, version, content, summary, diff_notes, diff_detail, generated_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, eventId, version, content, summary || '', diffNotes || '', diffDetail || null, generatedBy || 'ai');
     return this.getById(id);
   }
 

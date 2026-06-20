@@ -72,6 +72,7 @@ function initDB() {
       content TEXT NOT NULL,
       summary TEXT,
       diff_notes TEXT,
+      diff_detail TEXT,
       generated_by TEXT DEFAULT 'ai',
       reviewed_by TEXT,
       reviewed_at TEXT,

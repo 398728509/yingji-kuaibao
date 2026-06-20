@@ -97,8 +97,9 @@ function generateReport(eventId) {
   const allItems = contentSections.flatMap(s => s.items);
   const summary = allItems.slice(0, 3).join('；') + (allItems.length > 3 ? '……' : '');
 
-  // 9. 变化标注
+  // 9. 变化标注 + 逐板块差异对比
   let diffNotes = '';
+  let diffDetail = null;
   if (lastReport) {
     const newMaterialsSince = materials.filter(
       m => new Date(m.created_at) > new Date(lastReport.created_at)
@@ -107,6 +108,38 @@ function generateReport(eventId) {
     diffNotes = `本周期新增 ${newCount} 条素材`;
     if (conflicts.length > 0) {
       diffNotes += ` | ⚠️ ${conflicts.length} 处信息矛盾待核实`;
+    }
+
+    // 逐板块 diff：对比当前版与上版的每个板块条目
+    try {
+      const prevContent = JSON.parse(lastReport.content || '[]');
+      const prevMap = {};
+      for (const sec of prevContent) prevMap[sec.key] = new Set(sec.items || []);
+
+      diffDetail = JSON.stringify(contentSections.map(sec => {
+        const prevItems = prevMap[sec.key] || new Set();
+        const added = [];
+        const removed = [];
+        const kept = [];
+
+        for (const item of (sec.items || [])) {
+          if (prevItems.has(item)) kept.push(item);
+          else added.push(item);
+        }
+        for (const item of prevItems) {
+          if (!(sec.items || []).includes(item)) removed.push(item);
+        }
+
+        return {
+          key: sec.key,
+          title: sec.title,
+          added,
+          removed,
+          kept
+        };
+      }));
+    } catch (e) {
+      console.warn('diff 生成失败:', e.message);
     }
   } else {
     diffNotes = '首版快报生成';
@@ -119,6 +152,7 @@ function generateReport(eventId) {
     content: JSON.stringify(contentSections),
     summary: `【${event.title}】${summary}`,
     diffNotes,
+    diffDetail,
     generatedBy: 'ai'
   });
 
