@@ -6,30 +6,58 @@
         <h1>⚙️ 系统管理</h1>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
-        <!-- 用户管理 -->
-        <div class="card">
+      <div style="display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto;gap:16px;">
+        <!-- 左上：用户管理 -->
+        <div class="card" style="grid-column:1;grid-row:1;">
           <div class="card-title">
             <span>👥 用户管理（{{ users.length }}人）</span>
             <button class="btn btn-sm btn-primary" @click="showAddUser = true">＋ 添加用户</button>
           </div>
           <table class="table">
-            <thead><tr><th>姓名</th><th>用户名</th><th>角色</th><th>单位</th><th>状态</th><th>操作</th></tr></thead>
+            <thead><tr><th style="min-width:80px;">姓名</th><th style="min-width:70px;">用户名</th><th style="white-space:nowrap;">角色</th><th>单位</th><th style="white-space:nowrap;width:60px;">状态</th><th style="white-space:nowrap;width:60px;">操作</th></tr></thead>
             <tbody>
-              <tr v-for="u in users" :key="u.id">
+              <tr v-for="u in users.slice(0, 5)" :key="u.id">
                 <td>{{ u.displayName }}</td>
                 <td style="font-size:12px;">{{ u.username }}</td>
-                <td><span class="badge badge-active">{{ roleName(u.role) }}</span></td>
+                <td><span class="badge badge-active" style="white-space:nowrap;">{{ roleName(u.role) }}</span></td>
                 <td style="font-size:12px;color:var(--text-light);">{{ u.unit || '-' }}</td>
-                <td><span :class="['badge', u.status === 'active' ? 'badge-active' : 'badge-closed']">{{ u.status === 'active' ? '正常' : '已停用' }}</span></td>
-                <td><button class="btn btn-sm" @click="editUser(u)">编辑</button></td>
+                <td style="white-space:nowrap;"><span :class="['badge', u.status === 'active' ? 'badge-active' : 'badge-closed']">{{ u.status === 'active' ? '正常' : '已停用' }}</span></td>
+                <td style="white-space:nowrap;"><button class="btn btn-sm" @click="editUser(u)">编辑</button></td>
               </tr>
             </tbody>
           </table>
+          <div v-if="users.length > 5" style="text-align:center;padding:8px;">
+            <button class="btn btn-sm" @click="$router.push('/admin/users')">更多用户 → ({{ users.length }}人)</button>
+          </div>
         </div>
 
-        <!-- 模板管理 -->
-        <div class="card">
+        <!-- 右上：邀请码管理 -->
+        <div class="card" style="grid-column:2;grid-row:1;">
+          <div class="card-title">
+            <span>🔑 邀请码管理（{{ invites.length }}个）</span>
+            <button class="btn btn-sm btn-primary" @click="generateInviteCodes">＋ 生成邀请码</button>
+          </div>
+          <table class="table" v-if="invites.length > 0">
+            <thead><tr><th>邀请码</th><th>状态</th><th>有效期</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr v-for="ic in invites.slice(0, 5)" :key="ic.id">
+                <td style="font-family:monospace;font-size:12px;">{{ ic.code }}</td>
+                <td style="white-space:nowrap;"><span :class="['badge',, ic.is_active ? 'badge-active' : 'badge-closed']">{{ ic.is_active ? '有效' : '已使用/已作废' }}</span></td>
+                <td style="font-size:12px;">{{ ic.expires_at || '永久' }}</td>
+                <td><button class="btn btn-sm btn-danger" @click="deleteInviteCode(ic.id)" :disabled="!ic.is_active">作废</button></td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-if="invites.length > 5" style="text-align:center;padding:8px;">
+            <button class="btn btn-sm" @click="$router.push('/admin/invites')">更多邀请码 → ({{ invites.length }}个)</button>
+          </div>
+          <div v-else style="text-align:center;padding:24px;color:var(--text-light);font-size:14px;">
+            暂无邀请码
+          </div>
+        </div>
+
+        <!-- 左下：快报模板 -->
+        <div class="card" style="grid-column:1;grid-row:2;">
           <div class="card-title">
             <span>📄 快报模板</span>
             <button class="btn btn-sm btn-primary" @click="addNewTemplate">＋ 新建模板</button>
@@ -52,49 +80,112 @@
           </div>
         </div>
 
-        <!-- 邀请码管理 -->
-        <div class="card">
-          <div class="card-title">
-            <span>🔑 邀请码管理（{{ invites.length }}个）</span>
-            <button class="btn btn-sm btn-primary" @click="generateInviteCodes">＋ 生成邀请码</button>
+        <!-- 右下：待审核用户 -->
+        <div class="card" style="grid-column:2;grid-row:2;">
+          <div class="card-title" v-if="pendingUsers.length > 0">
+            <span>⏳ 待审核用户（{{ pendingUsers.length }}人）</span>
           </div>
-          <table class="table" v-if="invites.length > 0">
-            <thead><tr><th>邀请码</th><th>状态</th><th>有效期</th><th>操作</th></tr></thead>
+          <table class="table" v-if="pendingUsers.length > 0">
+            <thead><tr><th>姓名</th><th>用户名</th><th>邀请码</th><th>注册时间</th><th>操作</th></tr></thead>
             <tbody>
-              <tr v-for="ic in invites" :key="ic.id">
-                <td style="font-family:monospace;font-size:12px;">{{ ic.code }}</td>
-                <td><span :class="['badge', ic.is_active ? 'badge-active' : 'badge-closed']">{{ ic.is_active ? '有效' : '已使用/已作废' }}</span></td>
-                <td style="font-size:12px;">{{ ic.expires_at || '永久' }}</td>
-                <td><button class="btn btn-sm btn-danger" @click="deleteInviteCode(ic.id)" :disabled="!ic.is_active">作废</button></td>
+              <tr v-for="pu in pendingUsers" :key="pu.id">
+                <td>{{ pu.displayName }}</td>
+                <td style="font-size:12px;">{{ pu.username }}</td>
+                <td style="font-family:monospace;font-size:12px;">{{ pu.invite_code || '-' }}</td>
+                <td style="font-size:12px;">{{ pu.created_at || '-' }}</td>
+                <td>
+                  <button class="btn btn-sm btn-primary" style="background:#52c41a;" @click="reviewUser(pu.id, 'approve')">批准</button>
+                  <button class="btn btn-sm btn-danger" @click="reviewUser(pu.id, 'reject')">拒绝</button>
+                </td>
               </tr>
             </tbody>
           </table>
-          <div v-else style="text-align:center;padding:24px;color:var(--text-light);font-size:14px;">
-            暂无邀请码
+          <div v-else style="display:flex;align-items:center;justify-content:center;min-height:80px;color:var(--text-light);font-size:14px;">
+            暂无待审核用户
           </div>
         </div>
       </div>
 
-      <!-- 待审核用户 -->
-      <div class="card" style="margin-top:16px;" v-if="pendingUsers.length > 0">
+      <!-- API 管理 -->
+      <div class="card" style="margin-top:16px;">
         <div class="card-title">
-          <span>⏳ 待审核用户（{{ pendingUsers.length }}人）</span>
+          <span>🔌 API 管理</span>
+          <div class="flex gap-8">
+            <button class="btn btn-sm" @click="showEndpoints = !showEndpoints">
+              {{ showEndpoints ? '隐藏' : '查看' }} API 端点
+            </button>
+            <button class="btn btn-sm btn-primary" @click="showGenerateApiKey = true">＋ 生成密钥</button>
+          </div>
         </div>
-        <table class="table">
-          <thead><tr><th>姓名</th><th>用户名</th><th>邀请码</th><th>注册时间</th><th>操作</th></tr></thead>
-          <tbody>
-            <tr v-for="pu in pendingUsers" :key="pu.id">
-              <td>{{ pu.displayName }}</td>
-              <td style="font-size:12px;">{{ pu.username }}</td>
-              <td style="font-family:monospace;font-size:12px;">{{ pu.invite_code || '-' }}</td>
-              <td style="font-size:12px;">{{ pu.created_at || '-' }}</td>
-              <td>
-                <button class="btn btn-sm btn-primary" style="background:#52c41a;" @click="reviewUser(pu.id, 'approve')">批准</button>
-                <button class="btn btn-sm btn-danger" @click="reviewUser(pu.id, 'reject')">拒绝</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+
+        <div v-if="showEndpoints" style="margin-bottom:12px;">
+          <div style="font-size:13px;color:var(--text-light);margin-bottom:8px;">
+            API 端点列表（共 {{ endpoints.length }} 个）
+          </div>
+          <table class="table" style="font-size:12px;">
+            <thead><tr><th>方法</th><th>路径</th><th>说明</th><th>权限</th></tr></thead>
+            <tbody>
+              <tr v-for="ep in endpoints" :key="ep.path">
+                <td style="white-space:nowrap;"><span :class="['badge',, ep.method === 'GET' ? 'badge-active' : ep.method === 'POST' ? 'badge-final' : 'badge-closed']">{{ ep.method }}</span></td>
+                <td style="font-family:monospace;">{{ ep.path }}</td>
+                <td>{{ ep.desc }}</td>
+                <td style="font-size:11px;">{{ ep.auth }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div v-if="apiKeys.length > 0">
+          <table class="table">
+            <thead><tr><th>名称</th><th>密钥前缀</th><th>权限</th><th>创建者</th><th>最后使用</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr v-for="k in apiKeys" :key="k.id">
+                <td>{{ k.name }}</td>
+                <td style="font-family:monospace;font-size:12px;">{{ k.prefix }}</td>
+                <td><span class="badge" :class="k.permission === 'write' ? 'badge-active' : k.permission === 'admin' ? 'badge-final' : ''">{{ k.permission }}</span></td>
+                <td style="font-size:12px;">{{ k.created_by_name || '-' }}</td>
+                <td style="font-size:12px;">{{ k.last_used_at || '从未使用' }}</td>
+                <td style="white-space:nowrap;"><span :class="['badge',, k.status === 'active' ? 'badge-active' : 'badge-closed']">{{ k.status === 'active' ? '有效' : '已撤销' }}</span></td>
+                <td>
+                  <button v-if="k.status === 'active'" class="btn btn-sm btn-danger" @click="revokeApiKey(k.id)">撤销</button>
+                  <span v-else style="color:var(--text-light);font-size:12px;">-</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div v-else style="text-align:center;padding:16px;color:var(--text-light);font-size:14px;">
+          暂无 API 密钥
+        </div>
+      </div>
+
+      <!-- 生成密钥弹窗 -->
+      <div v-if="showGenerateApiKey" class="modal-overlay" @click.self="showGenerateApiKey = false">
+        <div class="modal" style="max-width:500px;">
+          <h2>生成 API 密钥</h2>
+          <div class="form-group">
+            <label class="form-label">密钥名称</label>
+            <input class="form-input" v-model="apiKeyForm.name" placeholder="例如：微信小程序、第三方集成" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">权限</label>
+            <select class="form-select" v-model="apiKeyForm.permission">
+              <option value="read">只读 (read)</option>
+              <option value="write">读写 (write)</option>
+              <option value="admin">管理 (admin)</option>
+            </select>
+          </div>
+          <div v-if="newApiKeyResult" style="padding:12px;background:#fff3cd;border-radius:8px;margin-bottom:12px;word-break:break-all;">
+            <div style="font-weight:600;margin-bottom:4px;">⚠️ 密钥创建成功，请立即保存！</div>
+            <div style="font-family:monospace;font-size:13px;background:#fff;padding:8px;border-radius:4px;user-select:all;">{{ newApiKeyResult }}</div>
+            <div style="font-size:12px;color:#856404;margin-top:4px;">密钥不会再次完整显示，丢失需重新生成。</div>
+          </div>
+          <div class="form-buttons">
+            <button class="btn" @click="showGenerateApiKey = false" v-if="newApiKeyResult">关闭</button>
+            <button class="btn" @click="showGenerateApiKey = false" v-else>取消</button>
+            <button v-if="!newApiKeyResult" class="btn btn-primary" @click="generateApiKey" :disabled="!apiKeyForm.name.trim()">生成</button>
+          </div>
+        </div>
       </div>
 
       <!-- Add User Modal -->
@@ -215,13 +306,19 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { userAPI, templateAPI, authAPI } from '@/utils/api'
+import { userAPI, templateAPI, authAPI, apiKeyAPI } from '@/utils/api'
 import Sidebar from '@/components/Sidebar.vue'
 
 const users = ref([])
 const templates = ref([])
 const invites = ref([])
 const pendingUsers = ref([])
+const apiKeys = ref([])
+const endpoints = ref([])
+const showEndpoints = ref(false)
+const showGenerateApiKey = ref(false)
+const apiKeyForm = ref({ name: '', permission: 'read' })
+const newApiKeyResult = ref('')
 const showAddUser = ref(false)
 const showEditUser = ref(false)
 const editForm = ref({ id: '', displayName: '', username: '', role: 'reporter', phone: '', unit: '', status: 'active' })
@@ -245,6 +342,12 @@ async function loadData() {
     templates.value = t.data || []
     invites.value = iv.data || []
     pendingUsers.value = pu.data || []
+    const [ak, ep] = await Promise.all([
+      apiKeyAPI.list().then(r => r.data).catch(() => []),
+      apiKeyAPI.listEndpoints().then(r => r.data).catch(() => [])
+    ])
+    apiKeys.value = ak
+    endpoints.value = ep
   } catch (e) {
     console.error('加载数据失败:', e)
   }
@@ -385,4 +488,27 @@ async function reviewUser(id, action) {
 }
 
 onMounted(loadData)
+
+async function generateApiKey() {
+  try {
+    const res = await apiKeyAPI.create(apiKeyForm.value.name.trim(), apiKeyForm.value.permission)
+    newApiKeyResult.value = res.data.apiKey
+    apiKeyForm.value = { name: '', permission: 'read' }
+    const ak = await apiKeyAPI.list().then(r => r.data).catch(() => [])
+    apiKeys.value = ak
+  } catch (e) {
+    alert('生成密钥失败')
+  }
+}
+
+async function revokeApiKey(id) {
+  if (!confirm('确定撤销该 API 密钥？撤销后无法恢复。')) return
+  try {
+    await apiKeyAPI.revoke(id)
+    const ak = await apiKeyAPI.list().then(r => r.data).catch(() => [])
+    apiKeys.value = ak
+  } catch (e) {
+    alert('撤销失败')
+  }
+}
 </script>

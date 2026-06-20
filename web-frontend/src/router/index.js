@@ -48,6 +48,16 @@ const routes = [
     component: () => import('@/views/Profile.vue')
   },
   {
+    path: '/admin/invites',
+    name: 'InviteManage',
+    component: () => import('@/views/InviteManage.vue')
+  },
+  {
+    path: '/admin/users',
+    name: 'UserManage',
+    component: () => import('@/views/UserManage.vue')
+  },
+  {
     path: '/admin',
     name: 'Admin',
     component: () => import('@/views/Admin.vue')

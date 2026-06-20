@@ -62,14 +62,23 @@
               <button :class="['btn btn-sm', { 'btn-primary': mFilter === 'all' }]" @click="mFilter='all'">全部</button>
               <button :class="['btn btn-sm', { 'btn-primary': mFilter === 'text' }]" @click="mFilter='text'">文字</button>
               <button :class="['btn btn-sm', { 'btn-primary': mFilter === 'photo' }]" @click="mFilter='photo'">照片</button>
-              <button :class="['btn btn-sm', { 'btn-primary': mFilter === 'voice' }]" @click="mFilter='voice'">语音</button>
+              <button :class="['btn btn-sm', { 'btn-primary': mFilter === 'video' }]" @click="mFilter='video'">视频</button>
             </span>
           </div>
           <div v-if="filteredMaterials.length === 0" class="empty">暂无素材</div>
           <!-- 照片缩略图网格 -->
           <div class="materials-grid">
             <div v-for="m in groupedMaterials.photos" :key="m.id" class="material-photo-item">
-              <img :src="m.file_path" class="material-thumb" @click="previewImg = m.file_path" @error="onImgError($event)" />
+              <img :src="m.file_path.startsWith('/') ? m.file_path : '/' + m.file_path" class="material-thumb" @click="previewImg = m.file_path.startsWith('/') ? m.file_path : '/' + m.file_path" @error="onImgError($event)" />
+              <span class="meta">{{ m.user_name }}</span>
+            </div>
+          </div>
+          <!-- 视频素材列表 -->
+          <div class="materials-grid">
+            <div v-for="m in groupedMaterials.videos" :key="m.id" class="material-video-item">
+              <video :src="m.file_path.startsWith('/') ? m.file_path : '/' + m.file_path" class="material-video" controls preload="metadata" @error="onImgError($event)">
+                您的浏览器不支持视频播放
+              </video>
               <span class="meta">{{ m.user_name }}</span>
             </div>
           </div>
@@ -116,12 +125,14 @@ const filteredMaterials = computed(() => {
 const groupedMaterials = computed(() => {
   const f = filteredMaterials.value
   const photos = []
+  const videos = []
   const texts = []
   for (const m of f) {
     if (m.type === 'photo' && m.file_path) photos.push(m)
+    else if (m.type === 'video' && m.file_path) videos.push(m)
     else texts.push(m)
   }
-  return { photos, texts }
+  return { photos, videos, texts }
 })
 
 const parsedContent = computed(() => {
@@ -184,6 +195,21 @@ onMounted(loadData)
   align-items: center;
   gap: 2px;
 }
+
+.material-video-item {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+  cursor: pointer;
+}
+.material-video {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  display: block;
+}
+.material-video-item .meta,
 .material-photo-item .meta {
   font-size: 10px;
   color: #999;

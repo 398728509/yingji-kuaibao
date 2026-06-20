@@ -48,7 +48,7 @@
             <div class="material-content">
               <div class="preview">
               <template v-if="a.type === 'photo' && a.file_path">
-                <img :src="a.file_path" class="material-thumb material-thumb-sm"
+                <img :src="a.file_path.startsWith('/') ? a.file_path : '/' + a.file_path" class="material-thumb material-thumb-sm"
                      @click.stop="previewImg = a.file_path"
                      @error="onImgError($event)" />
               </template>

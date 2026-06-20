@@ -17,6 +17,8 @@ const userRoutes = require('./routes/users');
 const uploadRoutes = require('./routes/upload');
 const templateRoutes = require('./routes/templates');
 const aiRoutes = require('./routes/ai');
+const apiKeyRoutes = require('./routes/api-keys');
+const { startFeishuBot } = require('./services/feishu');
 
 const app = express();
 const server = http.createServer(app);
@@ -51,6 +53,10 @@ app.use('/api/users', authMiddleware, userRoutes);
 app.use('/api/upload', authMiddleware, uploadRoutes);
 app.use('/api/templates', authMiddleware, templateRoutes);
 app.use('/api/ai', authMiddleware, aiRoutes);
+app.use('/api/api-keys', apiKeyRoutes);
+const feishuRoutes = require('./routes/feishu');
+app.use('/api/feishu', feishuRoutes);
+
 
 // WebSocket
 const wss = setupWebSocket(server);
@@ -60,6 +66,13 @@ initDB();
 
 // 启动定时生成周期
 initCycles();
+
+// 启动飞书机器人长连接
+try {
+  startFeishuBot();
+} catch (err) {
+  console.error('⚠️ 飞书机器人启动失败:', err.message);
+}
 
 // 全局错误处理中间件
 app.use((err, req, res, next) => {

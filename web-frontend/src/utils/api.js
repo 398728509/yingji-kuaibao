@@ -112,3 +112,9 @@ export const exportAPI = {
   word: (reportId) => `${window.location.origin}/api/reports/${reportId}/export/word`,
   html: (reportId) => `${window.location.origin}/api/reports/${reportId}/export/html`
 }
+export const apiKeyAPI = {
+  list: () => api.get('/api-keys'),
+  listEndpoints: () => api.get('/api-keys/endpoints'),
+  create: (name, permission = 'read') => api.post('/api-keys', { name, permission }),
+  revoke: (id) => api.delete(`/api-keys/${id}`)
+}
