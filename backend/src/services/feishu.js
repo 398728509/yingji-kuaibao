@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcryptjs');
+const Tesseract = require('tesseract.js');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const { db } = require('../models/database');
@@ -235,6 +236,40 @@ async function handleImageMessage(imageKey, messageId, chatId, openId) {
     // 触发快报生成
     triggerGenerate(session.eventId);
 
+    // === OCR 识别图片中的文字 ===
+    try {
+      const ocrText = await extractTextFromImage(filePath);
+      if (ocrText && ocrText.length > 3) {
+        // 有文字内容 - 额外写入一条文字素材
+        const ocrMaterial = MaterialModel.create({
+          eventId: session.eventId,
+          userId: reporter.id,
+          type: 'text',
+          content: '📷 图片识别: ' + ocrText,
+          tags: '飞书上报表（OCR）'
+        });
+
+        // 更新图片素材的 ocr_text
+        db.prepare('UPDATE materials SET ocr_text = ? WHERE id = ?').run(ocrText, material.id);
+
+        // 广播文字素材通知
+        broadcast({
+          type: 'material_created',
+          eventId: session.eventId,
+          materialId: ocrMaterial.id,
+          userId: reporter.id,
+          type: 'text'
+        });
+
+        console.log('📝 OCR写入文字素材成功:', ocrText.substring(0, 50));
+      } else {
+        // 更新图片素材的 ocr_text 为空（无文字图片）
+        db.prepare('UPDATE materials SET ocr_text = ? WHERE id = ?').run('', material.id);
+      }
+    } catch (ocrErr) {
+      console.error('❌ OCR处理异常:', ocrErr.message);
+    }
+
     return '✅ 图片素材已提交\n' +
       '━━━━━━━━━━━━━━━━\n' +
       '🆔 事件: ' + session.eventTitle + '\n' +
@@ -359,6 +394,24 @@ function getSimpleUserName(openId) {
   return '飞书用户_' + (openId ? openId.substring(openId.length - 6) : 'unknown');
 }
 
+
+
+
+// ===== 图片OCR文字识别 =====
+async function extractTextFromImage(imagePath) {
+  try {
+    if (!fs.existsSync(imagePath)) return '';
+    const { data } = await Tesseract.recognize(imagePath, 'chi_sim+eng', {
+      logger: m => {} // 静默模式
+    });
+    const text = (data.text || '').trim();
+    console.log('📝 OCR识别结果:', text ? text.substring(0, 80) + (text.length > 80 ? '...' : '') : '(无文字)');
+    return text;
+  } catch (err) {
+    console.error('❌ OCR识别失败:', err.message);
+    return '';
+  }
+}
 
 async function handleMessage(text, chatId, sender) {
   // 从 sender 中提取 open_id
