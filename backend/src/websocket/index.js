@@ -17,15 +17,16 @@ function setupWebSocket(server) {
       ws.close(4001, 'Missing authentication token');
       return;
     }
+    let decoded = null;
     try {
-      const decoded = jwt.verify(token, JWT_SECRET);
+      decoded = jwt.verify(token, JWT_SECRET);
       ws.user = decoded;
     } catch (err) {
       console.log('🔒 WebSocket 连接拒绝: 无效 token');
       ws.close(4001, 'Invalid authentication token');
       return;
     }
-    console.log('🔌 WebSocket 客户端已连接:', decoded.username);
+    console.log('🔌 WebSocket 客户端已连接:', decoded ? decoded.username : '?');
 
     ws.on('message', (data) => {
       try {

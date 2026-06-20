@@ -73,7 +73,11 @@ export const authAPI = {
   updateProfile: (data) => api.put('/auth/profile', data),
   checkUsername: (username) => api.get('/auth/check-username', { params: { username } }),
   adminCreate: (data) => api.post('/auth/admin-create', data),
-  generateInvite: (data) => api.post('/auth/invite-codes', data)
+  generateInvite: (data) => api.post('/auth/invite-codes', data),
+  listInvites: () => api.get('/auth/invite-codes'),
+  deleteInvite: (id) => api.delete(`/auth/invite-codes/${id}`),
+  listPendingUsers: () => api.get('/auth/pending-users'),
+  reviewUser: (id, action) => api.put(`/auth/pending-users/${id}`, { action })
 }
 
 export const templateAPI = {

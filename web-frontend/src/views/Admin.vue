@@ -6,7 +6,7 @@
         <h1>⚙️ 系统管理</h1>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
         <!-- 用户管理 -->
         <div class="card">
           <div class="card-title">
@@ -51,6 +51,50 @@
             </div>
           </div>
         </div>
+
+        <!-- 邀请码管理 -->
+        <div class="card">
+          <div class="card-title">
+            <span>🔑 邀请码管理（{{ invites.length }}个）</span>
+            <button class="btn btn-sm btn-primary" @click="generateInviteCodes">＋ 生成邀请码</button>
+          </div>
+          <table class="table" v-if="invites.length > 0">
+            <thead><tr><th>邀请码</th><th>状态</th><th>有效期</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr v-for="ic in invites" :key="ic.id">
+                <td style="font-family:monospace;font-size:12px;">{{ ic.code }}</td>
+                <td><span :class="['badge', ic.is_active ? 'badge-active' : 'badge-closed']">{{ ic.is_active ? '有效' : '已使用/已作废' }}</span></td>
+                <td style="font-size:12px;">{{ ic.expires_at || '永久' }}</td>
+                <td><button class="btn btn-sm btn-danger" @click="deleteInviteCode(ic.id)" :disabled="!ic.is_active">作废</button></td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-else style="text-align:center;padding:24px;color:var(--text-light);font-size:14px;">
+            暂无邀请码
+          </div>
+        </div>
+      </div>
+
+      <!-- 待审核用户 -->
+      <div class="card" style="margin-top:16px;" v-if="pendingUsers.length > 0">
+        <div class="card-title">
+          <span>⏳ 待审核用户（{{ pendingUsers.length }}人）</span>
+        </div>
+        <table class="table">
+          <thead><tr><th>姓名</th><th>用户名</th><th>邀请码</th><th>注册时间</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr v-for="pu in pendingUsers" :key="pu.id">
+              <td>{{ pu.displayName }}</td>
+              <td style="font-size:12px;">{{ pu.username }}</td>
+              <td style="font-family:monospace;font-size:12px;">{{ pu.invite_code || '-' }}</td>
+              <td style="font-size:12px;">{{ pu.created_at || '-' }}</td>
+              <td>
+                <button class="btn btn-sm btn-primary" style="background:#52c41a;" @click="reviewUser(pu.id, 'approve')">批准</button>
+                <button class="btn btn-sm btn-danger" @click="reviewUser(pu.id, 'reject')">拒绝</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       <!-- Add User Modal -->
@@ -176,6 +220,8 @@ import Sidebar from '@/components/Sidebar.vue'
 
 const users = ref([])
 const templates = ref([])
+const invites = ref([])
+const pendingUsers = ref([])
 const showAddUser = ref(false)
 const showEditUser = ref(false)
 const editForm = ref({ id: '', displayName: '', username: '', role: 'reporter', phone: '', unit: '', status: 'active' })
@@ -191,9 +237,14 @@ function roleName(r) {
 
 async function loadData() {
   try {
-    const [u, t] = await Promise.all([userAPI.list(), templateAPI.list()])
-    users.value = u.data
-    templates.value = t.data
+    const [u, t, iv, pu] = await Promise.all([
+      userAPI.list(), templateAPI.list(),
+      authAPI.listInvites(), authAPI.listPendingUsers()
+    ])
+    users.value = u.data || []
+    templates.value = t.data || []
+    invites.value = iv.data || []
+    pendingUsers.value = pu.data || []
   } catch (e) {
     console.error('加载数据失败:', e)
   }
@@ -299,6 +350,38 @@ function addSection() {
 
 function removeSection(idx) {
   templateForm.value.sections.splice(idx, 1)
+}
+
+async function generateInviteCodes() {
+  const count = prompt('请输入生成数量（默认5个）：', '5')
+  if (!count || isNaN(count) || parseInt(count) < 1) return
+  const days = prompt('有效期天数（默认30天）：', '30')
+  if (!days || isNaN(days)) return
+  try {
+    await authAPI.generateInvite({ count: parseInt(count), expiresInDays: parseInt(days) })
+    loadData()
+  } catch (e) {
+    alert('生成失败')
+  }
+}
+
+async function deleteInviteCode(id) {
+  if (!confirm('确定作废该邀请码？')) return
+  try {
+    await authAPI.deleteInvite(id)
+    loadData()
+  } catch (e) {
+    alert('操作失败')
+  }
+}
+
+async function reviewUser(id, action) {
+  try {
+    await authAPI.reviewUser(id, action)
+    loadData()
+  } catch (e) {
+    alert('操作失败')
+  }
 }
 
 onMounted(loadData)
