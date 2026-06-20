@@ -13,13 +13,13 @@
          class="nav-item" :class="{ active: $route.path === '/command' }" @click="$router.push('/command')">
       📊 指挥看板
     </div>
-    <div v-if="user.role === 'admin'"
-         class="nav-item" :class="{ active: $route.path === '/admin' }" @click="$router.push('/admin')">
-      ⚙️ 系统管理
-    </div>
     <div style="height:1px;background:rgba(255,255,255,0.1);margin:8px 16px;"></div>
     <div class="nav-item" :class="{ active: $route.path.startsWith('/events') }" @click="$router.push('/events')">
       🚨 事件管理
+    </div>
+    <div v-if="user.role === 'admin'"
+         class="nav-item" :class="{ active: $route.path === '/admin' }" @click="$router.push('/admin')">
+      ⚙️ 系统管理
     </div>
 
     <div style="flex:1"></div>

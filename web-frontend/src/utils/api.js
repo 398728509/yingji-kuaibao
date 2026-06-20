@@ -69,15 +69,20 @@ export const authAPI = {
   me: () => api.get('/auth/me'),
   refresh: () => api.post('/auth/refresh'),
   changePassword: (oldPassword, newPassword) => api.put('/auth/password', { oldPassword, newPassword }),
+  register: (data) => api.post('/auth/register', data),
   updateProfile: (data) => api.put('/auth/profile', data),
-  register: (data) => api.post('/auth/register', data)
+  checkUsername: (username) => api.get('/auth/check-username', { params: { username } }),
+  adminCreate: (data) => api.post('/auth/admin-create', data),
+  generateInvite: (data) => api.post('/auth/invite-codes', data)
 }
 
 export const templateAPI = {
   list: () => api.get('/templates'),
   getDefault: () => api.get('/templates/default'),
   create: (data) => api.post('/templates', data),
-  setDefault: (id) => api.post(`/templates/${id}/default`)
+  setDefault: (id) => api.post(`/templates/${id}/default`),
+  update: (id, data) => api.put(`/templates/${id}`, data),
+  delete: (id) => api.delete(`/templates/${id}`)
 }
 
 export const uploadAPI = {

@@ -15,19 +15,19 @@
 
       <!-- 统计卡片 -->
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
-        <div class="card" style="padding:16px;text-align:center;">
+        <div class="card" style="padding:16px;text-align:center;cursor:pointer;" @click="activeCount > 0 && $router.push('/events')">
           <div style="font-size:28px;color:var(--danger);font-weight:700;">{{ activeCount }}</div>
           <div style="font-size:12px;color:var(--text-secondary);">进行中事件</div>
         </div>
-        <div class="card" style="padding:16px;text-align:center;">
+        <div class="card" style="padding:16px;text-align:center;cursor:pointer;" @click="totalMaterials > 0 && $router.push('/events')">
           <div style="font-size:28px;color:var(--primary);font-weight:700;">{{ totalMaterials }}</div>
           <div style="font-size:12px;color:var(--text-secondary);">全部素材</div>
         </div>
-        <div class="card" style="padding:16px;text-align:center;">
+        <div class="card" style="padding:16px;text-align:center;cursor:pointer;" @click="totalReports > 0 && $router.push('/events')">
           <div style="font-size:28px;color:var(--success);font-weight:700;">{{ totalReports }}</div>
           <div style="font-size:12px;color:var(--text-secondary);">已出快报</div>
         </div>
-        <div class="card" style="padding:16px;text-align:center;">
+        <div class="card" style="padding:16px;text-align:center;cursor:pointer;" @click="pendingReview > 0 && $router.push('/events')">
           <div style="font-size:28px;color:var(--warning);font-weight:700;">{{ pendingReview }}</div>
           <div style="font-size:12px;color:var(--text-secondary);">待定稿</div>
         </div>

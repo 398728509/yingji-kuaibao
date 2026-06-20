@@ -35,6 +35,15 @@ class TemplateModel {
     db.prepare('UPDATE templates SET is_default = 0 WHERE is_default = 1').run();
     db.prepare('UPDATE templates SET is_default = 1 WHERE id = ?').run(id);
   }
+
+  static update(id, { name, config }) {
+    db.prepare("UPDATE templates SET name = ?, config = ?, updated_at = datetime('now','localtime') WHERE id = ?").run(name, JSON.stringify(config), id);
+    return this.getById(id);
+  }
+
+  static delete(id) {
+    db.prepare('DELETE FROM templates WHERE id = ?').run(id);
+  }
 }
 
 module.exports = TemplateModel;

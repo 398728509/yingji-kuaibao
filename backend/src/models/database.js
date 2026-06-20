@@ -7,25 +7,27 @@ if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
 
 const db = new Database(path.join(DB_DIR, 'yingji-kuaibao.db'));
 
-// 开启 WAL 模式提升并发性能
 db.pragma('journal_mode = WAL');
 
 function initDB() {
+  try { db.exec("ALTER TABLE users ADD COLUMN unit TEXT"); } catch(e) { }
+  try { db.exec("ALTER TABLE users ADD COLUMN invite_code TEXT"); } catch(e) { }
+
   db.exec(`
-    -- 用户表
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       username TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
       display_name TEXT NOT NULL,
       role TEXT NOT NULL CHECK(role IN ('admin','reporter','reviewer','commander')),
-      phone TEXT, unit TEXT DEFAULT null,
-      status TEXT DEFAULT 'active',
+      phone TEXT,
+      unit TEXT,
+      invite_code TEXT,
+      status TEXT DEFAULT 'active' CHECK(status IN ('active','pending','disabled')),
       created_at TEXT DEFAULT (datetime('now','localtime')),
       updated_at TEXT DEFAULT (datetime('now','localtime'))
     );
 
-    -- 事件表
     CREATE TABLE IF NOT EXISTS events (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
@@ -40,7 +42,6 @@ function initDB() {
       closed_at TEXT
     );
 
-    -- 素材表
     CREATE TABLE IF NOT EXISTS materials (
       id TEXT PRIMARY KEY,
       event_id TEXT NOT NULL,
@@ -60,7 +61,6 @@ function initDB() {
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
 
-    -- 快报表
     CREATE TABLE IF NOT EXISTS reports (
       id TEXT PRIMARY KEY,
       event_id TEXT NOT NULL,
@@ -77,7 +77,6 @@ function initDB() {
       FOREIGN KEY (event_id) REFERENCES events(id)
     );
 
-    -- 快报模板表
     CREATE TABLE IF NOT EXISTS templates (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -88,7 +87,6 @@ function initDB() {
       updated_at TEXT DEFAULT (datetime('now','localtime'))
     );
 
-    -- 素材关联快报表（记录素材被哪期快报采用）
     CREATE TABLE IF NOT EXISTS report_materials (
       report_id TEXT NOT NULL,
       material_id TEXT NOT NULL,
@@ -97,7 +95,6 @@ function initDB() {
       FOREIGN KEY (material_id) REFERENCES materials(id)
     );
 
-    -- 事件参与人表
     CREATE TABLE IF NOT EXISTS event_members (
       event_id TEXT NOT NULL,
       user_id TEXT NOT NULL,
@@ -108,32 +105,42 @@ function initDB() {
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
 
-    -- 索引
+    CREATE TABLE IF NOT EXISTS invite_codes (
+      id TEXT PRIMARY KEY,
+      code TEXT NOT NULL UNIQUE,
+      created_by TEXT NOT NULL,
+      used_by TEXT,
+      used_at TEXT,
+      expires_at TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now','localtime'))
+    );
+
     CREATE INDEX IF NOT EXISTS idx_materials_event ON materials(event_id);
     CREATE INDEX IF NOT EXISTS idx_materials_user ON materials(user_id);
     CREATE INDEX IF NOT EXISTS idx_materials_created ON materials(created_at);
     CREATE INDEX IF NOT EXISTS idx_reports_event ON reports(event_id);
     CREATE INDEX IF NOT EXISTS idx_reports_version ON reports(event_id, version);
     CREATE INDEX IF NOT EXISTS idx_events_status ON events(status);
+    CREATE INDEX IF NOT EXISTS idx_invite_codes_code ON invite_codes(code);
   `);
 
-  // 初始化默认模板
   const existingTpl = db.prepare('SELECT id FROM templates WHERE is_default = 1').get();
   if (!existingTpl) {
     const defaultTemplate = {
       sections: [
-        { key: 'event_overview', name: '事件概况', required: true },
-        { key: 'casualties', name: '伤亡情况', required: true },
-        { key: 'response_progress', name: '处置进展', required: true },
-        { key: 'coordination', name: '需协调事项', required: true },
-        { key: 'site_conditions', name: '现场情况', required: true }
+        { key: 'event_overview', name: '\u4e8b\u4ef6\u6982\u51b5', required: true },
+        { key: 'casualties', name: '\u4f24\u4ea1\u60c5\u51b5', required: true },
+        { key: 'response_progress', name: '\u5904\u7f6e\u8fdb\u5c55', required: true },
+        { key: 'coordination', name: '\u9700\u534f\u8c03\u4e8b\u9879', required: true },
+        { key: 'site_conditions', name: '\u73b0\u573a\u60c5\u51b5', required: true }
       ]
     };
-    db.prepare(`INSERT INTO templates (id, name, config, is_default) VALUES (?, ?, ?, 1)`)
-      .run('default', '默认快报模板', JSON.stringify(defaultTemplate));
+    db.prepare('INSERT INTO templates (id, name, config, is_default) VALUES (?, ?, ?, 1)')
+      .run('default', '\u9ed8\u8ba4\u5feb\u62a5\u6a21\u677f', JSON.stringify(defaultTemplate));
   }
 
-  console.log('✅ 数据库初始化完成');
+  console.log('\u2705 \u6570\u636e\u5e93\u521d\u59cb\u5316\u5b8c\u6210');
 }
 
 module.exports = { db, initDB };

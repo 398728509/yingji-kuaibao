@@ -3,6 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const http = require('http');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+require('express-async-errors');
 
 const { setupWebSocket } = require('./websocket');
 const { initDB } = require('./models/database');
@@ -20,18 +21,18 @@ const aiRoutes = require('./routes/ai');
 const app = express();
 const server = http.createServer(app);
 
-// CORS 配置（生产环境需按需收紧）
+// CORS 配置（通过 Nginx 反向代理时同源，放宽配置即可)
+// 如需严格限制，设置环境变量 CORS_ORIGIN=https://your-domain.com
+const corsOrigin = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(s => s.trim()) : '*';
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production'
-    ? ['https://你的域名.com', /.你的域名.com$/]
-    : '*',
+  origin: corsOrigin,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization']
 };
 app.use(cors(corsOptions));
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // 健康检查
