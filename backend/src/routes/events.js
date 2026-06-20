@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const EventModel = require('../models/Event');
+const { requireRole } = require('../middleware/auth');
 
 // 获取事件列表
 router.get('/', (req, res) => {
@@ -16,8 +17,8 @@ router.get('/:id', (req, res) => {
   res.json(event);
 });
 
-// 创建事件
-router.post('/', (req, res) => {
+// 创建事件（仅管理员）
+router.post('/', requireRole('admin'), (req, res) => {
   const { title, description, location, longitude, latitude, createdBy } = req.body;
   if (!title || !location || !createdBy) {
     return res.status(400).json({ error: '缺少必要字段：title, location, createdBy' });

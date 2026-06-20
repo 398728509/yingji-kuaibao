@@ -157,6 +157,19 @@ router.get('/:filename', (req, res) => {
   const subDirs = ['photos', 'voices', 'videos', 'file', 'documents', 'others'];
   const filename = req.params.filename;
 
+  // 先查根目录（如 .gitkeep）
+  const rootPath = path.join(UPLOAD_DIR, filename);
+  if (fs.existsSync(rootPath)) {
+    const stat = fs.statSync(rootPath);
+    return res.json({
+      filename,
+      path: `/uploads/${filename}`,
+      size: stat.size,
+      createdAt: stat.birthtime
+    });
+  }
+
+  // 再查子目录
   for (const sub of subDirs) {
     const fullPath = path.join(UPLOAD_DIR, sub, filename);
     if (fs.existsSync(fullPath)) {

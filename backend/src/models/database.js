@@ -130,9 +130,9 @@ function initDB() {
     CREATE INDEX IF NOT EXISTS idx_invite_codes_code ON invite_codes(code);
   `);
 
-  const existingTpl = db.prepare('SELECT id FROM templates WHERE is_default = 1').get();
-  if (!existingTpl) {
-    const defaultTemplate = {
+  // 检查默认模板是否存在，存在则跳过；使用 INSERT OR IGNORE 避免重复插入主键冲突
+  db.prepare("INSERT OR IGNORE INTO templates (id, name, config, is_default) VALUES ('default', '\u9ed8\u8ba4\u5feb\u62a5\u6a21\u677f', ?, 1)").run(
+    JSON.stringify({
       sections: [
         { key: 'event_overview', name: '\u4e8b\u4ef6\u6982\u51b5', required: true },
         { key: 'casualties', name: '\u4f24\u4ea1\u60c5\u51b5', required: true },
@@ -140,10 +140,8 @@ function initDB() {
         { key: 'coordination', name: '\u9700\u534f\u8c03\u4e8b\u9879', required: true },
         { key: 'site_conditions', name: '\u73b0\u573a\u60c5\u51b5', required: true }
       ]
-    };
-    db.prepare('INSERT INTO templates (id, name, config, is_default) VALUES (?, ?, ?, 1)')
-      .run('default', '\u9ed8\u8ba4\u5feb\u62a5\u6a21\u677f', JSON.stringify(defaultTemplate));
-  }
+    })
+  );
 
   console.log('\u2705 \u6570\u636e\u5e93\u521d\u59cb\u5316\u5b8c\u6210');
 }
