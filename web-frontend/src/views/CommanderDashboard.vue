@@ -102,18 +102,21 @@ function formatTime(t) {
 }
 
 async function refreshAll() {
-  const res = await eventAPI.list()
-  events.value = res.data
+  const [evtRes] = await Promise.all([eventAPI.list()])
+  events.value = evtRes.data
   lastRefresh.value = new Date().toLocaleTimeString('zh-CN')
 
-  // Preload reports for events that are expanded or have active status
-  for (const e of events.value) {
-    if (e.status === 'active') {
-      try {
-        const r = await reportAPI.getLatest(e.id)
-        if (r.data) eventReports.value[e.id] = r.data
-      } catch { /* skip */ }
-    }
+  // Preload reports for active events — 并行拉取
+  const activeEvents = events.value.filter(e => e.status === 'active')
+  if (activeEvents.length > 0) {
+    const results = await Promise.allSettled(
+      activeEvents.map(e => reportAPI.getLatest(e.id))
+    )
+    results.forEach((r, i) => {
+      if (r.status === 'fulfilled' && r.value.data) {
+        eventReports.value[activeEvents[i].id] = r.value.data
+      }
+    })
   }
 }
 

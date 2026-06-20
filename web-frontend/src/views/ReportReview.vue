@@ -125,21 +125,24 @@ function saveSection(idx) {
 }
 
 async function loadData() {
-  const rep = await reportAPI.get(route.params.reportId)
-  report.value = rep.data
+  try {
+    const [repRes, evtRes] = await Promise.all([
+      reportAPI.get(route.params.reportId),
+      eventAPI.get(route.params.id)
+    ])
+    report.value = repRes.data
+    event.value = evtRes.data
+    materials.value = report.value.materials || []
 
-  const evt = await eventAPI.get(route.params.id)
-  event.value = evt.data
-
-  if (report.value.version > 1) {
-    const allReports = await reportAPI.listByEvent(route.params.id)
-    const prev = allReports.data.find(r => r.version === report.value.version - 1)
-    prevReport.value = prev || null
-  }
-
-  if (report.value.id) {
-    const mats = await reportAPI.get(route.params.reportId)
-    materials.value = mats.data.materials || []
+    // 并行拉取上版对比（不阻塞主流程）
+    if (report.value.version > 1) {
+      reportAPI.listByEvent(route.params.id).then(res => {
+        const prev = res.data.find(r => r.version === report.value.version - 1)
+        if (prev) prevReport.value = prev
+      }).catch(() => {})
+    }
+  } catch (e) {
+    console.error('加载失败:', e)
   }
 }
 

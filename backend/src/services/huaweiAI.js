@@ -147,36 +147,27 @@ function classifyMaterial(text) {
 function detectConflicts(materials) {
   const conflicts = [];
 
-  // 提取数字信息
-  const numbers = [];
+  // 按关键词分组（如"死亡"、"受伤"等），组内检测不同数值
+  const groups = {};
   for (const m of materials) {
     const text = m.content || m.voice_text || '';
-    // 匹配 "X人" 模式
-    const matches = text.match(/(\d+)\s*人/g);
-    if (matches) {
-      for (const match of matches) {
-        numbers.push({
-          materialId: m.id,
-          text: match,
-          user: m.user_name,
-          time: m.created_at
-        });
-      }
+    const matches = text.matchAll(/(\d+)\s*人/g);
+    for (const match of matches) {
+      const prefix = text.substring(0, match.index);
+      const kwMatch = prefix.match(/(死亡|受伤|失联|遇难|被困|送医|疏散|转移)(?:了|约|近|共)*$/);
+      const kw = kwMatch ? kwMatch[1] : '其他';
+      if (!groups[kw]) groups[kw] = new Set();
+      groups[kw].add(match[1]);
     }
   }
 
-  // 简单冲突检测：同一数字维度有不同值
-  // 例如一个说"死亡2人"，另一个说"死亡3人"
-  for (let i = 0; i < numbers.length; i++) {
-    for (let j = i + 1; j < numbers.length; j++) {
-      if (numbers[i].text !== numbers[j].text &&
-          numbers[i].text.includes(numbers[j].text.replace(/\d+/, ''))) {
-        conflicts.push({
-          type: 'number_conflict',
-          description: `数值冲突：${numbers[i].text} vs ${numbers[j].text}`,
-          sources: [numbers[i], numbers[j]]
-        });
-      }
+  for (const [kw, vals] of Object.entries(groups)) {
+    if (vals.size > 1) {
+      conflicts.push({
+        type: 'number_conflict',
+        description: kw + '人数冲突：' + [...vals].join(' vs '),
+        sources: [{ keyword: kw, values: [...vals] }]
+      });
     }
   }
 

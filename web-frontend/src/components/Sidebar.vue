@@ -38,7 +38,10 @@
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-const user = JSON.parse(localStorage.getItem('user') || '{}')
+// 缓存 user 避免重复 JSON.parse
+let _cachedUser = null
+const user = (() => { if (!_cachedUser) _cachedUser = JSON.parse(localStorage.getItem('user') || '{}'); return _cachedUser; })()
+const roleCheck = { reporter: true, reviewer: true, admin: true, commander: true }
 
 function logout() {
   localStorage.removeItem('token')

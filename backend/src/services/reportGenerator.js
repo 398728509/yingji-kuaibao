@@ -18,36 +18,20 @@ function generateReport(eventId) {
   const version = ReportModel.getNextVersion(eventId);
   const template = TemplateModel.getActive() || JSON.parse(TemplateModel.getDefault()?.config || '{}');
 
-  // 1. 提取文本内容
-  const textMaterials = materials.filter(m => m.type === 'text').map(m => ({
-    text: m.content, user: m.user_name, time: m.created_at, id: m.id
-  }));
-
-  // 2. 提取语音转文字内容
-  const voiceMaterials = materials.filter(m => m.type === 'voice' && m.voice_text).map(m => ({
-    text: m.voice_text, user: m.user_name, time: m.created_at, id: m.id
-  }));
-
-  // 3. 提取照片 OCR 内容
-  const photoMaterials = materials.filter(m => m.type === 'photo' && m.ocr_text).map(m => ({
-    text: m.ocr_text, user: m.user_name, time: m.created_at, id: m.id
-  }));
-
-  // 4. 提取照片文字描述
-  const photoDescMaterials = materials.filter(m => m.type === 'photo').map(m => ({
-    text: m.content || '(照片)',
-    user: m.user_name,
-    time: m.created_at,
-    id: m.id
-  }));
-
-  // 5. 综合所有文本信息
-  const allEntries = [
-    ...textMaterials,
-    ...voiceMaterials,
-    ...photoDescMaterials,
-    ...photoMaterials
-  ].sort((a, b) => new Date(a.time) - new Date(b.time));
+  // 1. 一次遍历提取所有文本信息
+  const allEntries = [];
+  for (const m of materials) {
+    let text = null;
+    if (m.type === 'text') text = m.content;
+    else if (m.type === 'voice') text = m.voice_text;
+    else if (m.type === 'photo') text = m.ocr_text || m.content || '(照片)';
+    if (text) {
+      allEntries.push({
+        text, user: m.user_name, time: m.created_at, id: m.id
+      });
+    }
+  }
+  allEntries.sort((a, b) => new Date(a.time) - new Date(b.time));
 
   // 6. 按板块分类
   const sections = {

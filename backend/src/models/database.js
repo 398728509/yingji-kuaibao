@@ -8,6 +8,9 @@ if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
 const db = new Database(path.join(DB_DIR, 'yingji-kuaibao.db'));
 
 db.pragma('journal_mode = WAL');
+db.pragma('synchronous = NORMAL');
+db.pragma('cache_size = -16000');
+db.pragma('temp_store = MEMORY');
 
 function initDB() {
   try { db.exec("ALTER TABLE users ADD COLUMN unit TEXT"); } catch(e) { }
@@ -120,6 +123,7 @@ function initDB() {
     CREATE INDEX IF NOT EXISTS idx_materials_user ON materials(user_id);
     CREATE INDEX IF NOT EXISTS idx_materials_created ON materials(created_at);
     CREATE INDEX IF NOT EXISTS idx_reports_event ON reports(event_id);
+    CREATE INDEX IF NOT EXISTS idx_reports_created ON reports(created_at);
     CREATE INDEX IF NOT EXISTS idx_reports_version ON reports(event_id, version);
     CREATE INDEX IF NOT EXISTS idx_events_status ON events(status);
     CREATE INDEX IF NOT EXISTS idx_invite_codes_code ON invite_codes(code);

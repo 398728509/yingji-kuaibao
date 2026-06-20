@@ -151,34 +151,25 @@ router.post('/photos', (req, res, next) => {
 
 /**
  * GET /api/upload/:filename
- * 获取上传文件信息
+ * 获取上传文件信息（只遍历已知子目录，避免递归全量扫描）
  */
 router.get('/:filename', (req, res) => {
-  // 递归搜索所有子目录
-  function findFile(dir, filename) {
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        const found = findFile(fullPath, filename);
-        if (found) return found;
-      } else if (entry.name === filename) {
-        return fullPath;
-      }
+  const subDirs = ['photos', 'voices', 'videos', 'file', 'documents', 'others'];
+  const filename = req.params.filename;
+
+  for (const sub of subDirs) {
+    const fullPath = path.join(UPLOAD_DIR, sub, filename);
+    if (fs.existsSync(fullPath)) {
+      const stat = fs.statSync(fullPath);
+      return res.json({
+        filename,
+        path: `/uploads/${sub}/${filename}`,
+        size: stat.size,
+        createdAt: stat.birthtime
+      });
     }
-    return null;
   }
-
-  const filePath = findFile(UPLOAD_DIR, req.params.filename);
-  if (!filePath) return res.status(404).json({ error: '文件不存在' });
-
-  const stat = fs.statSync(filePath);
-  res.json({
-    filename: req.params.filename,
-    path: filePath.replace(UPLOAD_DIR, '/uploads'),
-    size: stat.size,
-    createdAt: stat.birthtime
-  });
+  res.status(404).json({ error: '文件不存在' });
 });
 
 module.exports = router;

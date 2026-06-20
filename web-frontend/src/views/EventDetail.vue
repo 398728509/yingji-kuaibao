@@ -68,13 +68,13 @@
           <div v-if="filteredMaterials.length === 0" class="empty">暂无素材</div>
           <!-- 照片缩略图网格 -->
           <div class="materials-grid">
-            <div v-for="m in photoMaterials" :key="m.id" class="material-photo-item">
+            <div v-for="m in groupedMaterials.photos" :key="m.id" class="material-photo-item">
               <img :src="m.file_path" class="material-thumb" @click="previewImg = m.file_path" @error="onImgError($event)" />
               <span class="meta">{{ m.user_name }}</span>
             </div>
           </div>
           <!-- 文字/语音素材列表 -->
-          <div v-for="m in textMaterials" :key="m.id" class="material-item">
+          <div v-for="m in groupedMaterials.texts" :key="m.id" class="material-item">
             <div :class="['material-icon']" :style="{ background: m.type === 'text' ? '#e8f4fd' : '#f6ffed' }">{{ m.type === 'text' ? '✏️' : '🎤' }}</div>
             <div class="material-content">
               <div class="preview">{{ m.content || m.voice_text || '(文件)' }}</div>
@@ -113,14 +113,15 @@ const filteredMaterials = computed(() => {
   return materials.value.filter(m => m.type === mFilter.value)
 })
 
-const photoMaterials = computed(() => {
+const groupedMaterials = computed(() => {
   const f = filteredMaterials.value
-  return f.filter(m => m.type === 'photo' && m.file_path)
-})
-
-const textMaterials = computed(() => {
-  const f = filteredMaterials.value
-  return f.filter(m => m.type !== 'photo' || !m.file_path)
+  const photos = []
+  const texts = []
+  for (const m of f) {
+    if (m.type === 'photo' && m.file_path) photos.push(m)
+    else texts.push(m)
+  }
+  return { photos, texts }
 })
 
 const parsedContent = computed(() => {

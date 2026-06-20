@@ -105,6 +105,6 @@ export const uploadAPI = {
 }
 
 export const exportAPI = {
-  word: (reportId) => `${api.defaults.baseURL}/reports/${reportId}/export/word`,
-  html: (reportId) => `${api.defaults.baseURL}/reports/${reportId}/export/html`
+  word: (reportId) => `${window.location.origin}/api/reports/${reportId}/export/word`,
+  html: (reportId) => `${window.location.origin}/api/reports/${reportId}/export/html`
 }
